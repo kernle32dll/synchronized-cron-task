@@ -16,6 +16,10 @@ const (
 	notElecting = int32(0)
 )
 
+// SynchronizedCronTask describes a task, which is identified by a cron expression and a
+// redis client it uses to synchronize execution across running instances.
+//
+// It supports graceful shutdowns via its Stop() function.
 type SynchronizedCronTask struct {
 	Name string
 
@@ -33,6 +37,7 @@ type TaskConfig struct {
 	LockHeartbeat          time.Duration
 }
 
+// Stop gracefully stops the task, while also freeing most of its underlying resources.
 func (synchronizedCronTask *SynchronizedCronTask) Stop() {
 	synchronizedCronTask.shutdownFunc()
 	synchronizedCronTask.cron.Stop()
@@ -42,8 +47,11 @@ func (synchronizedCronTask *SynchronizedCronTask) Stop() {
 	synchronizedCronTask.cron = nil
 }
 
+// TaskFunc is a function, that is called upon the cron firing.
 type TaskFunc func(ctx context.Context, task *SynchronizedCronTask) error
 
+// CreateSynchronizedCronTask creates a new SynchronizedCronTask instance, or errors out
+// if the provided cron expression was invalid.
 func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronTaskConfig TaskConfig, taskFunc TaskFunc) (*SynchronizedCronTask, error) {
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
@@ -94,11 +102,24 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronT
 	return synchronizedTask, nil
 }
 
+// ExecuteNow forces the cron to fire immediately. Locking is still
+// honored, so no concurrent task execution can be forced this way.
 func (synchronizedCronTask *SynchronizedCronTask) ExecuteNow() {
+	if synchronizedCronTask.cron == nil {
+		logrus.Warnf("Tried to force execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		return
+	}
+
 	synchronizedCronTask.cron.Entries()[0].Job.Run()
 }
 
+// NextTime returns the next time the cron task will fire.
 func (synchronizedCronTask *SynchronizedCronTask) NextTime() time.Time {
+	if synchronizedCronTask.cron == nil {
+		logrus.Warnf("Tried to retrieve next execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		return time.Time{}
+	}
+
 	return synchronizedCronTask.cron.Entries()[0].Schedule.Next(time.Now())
 }
 
