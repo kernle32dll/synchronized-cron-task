@@ -172,9 +172,9 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 		case err := <-doneChannel:
 			if err != nil {
 				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.Name, err)
-			} else {
-				return nil
 			}
+
+			return nil
 		case <-ticker.C:
 			// Renew the lock
 			if err := lock.Refresh(lockTimeout, &redislock.Options{
