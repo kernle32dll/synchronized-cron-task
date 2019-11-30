@@ -30,11 +30,10 @@ type SynchronizedCronTask struct {
 	shutdownFunc       func()
 }
 
-type TaskConfig struct {
-	LeadershipCronInterval string
-	LeadershipTimeout      time.Duration
-	LockTimeout            time.Duration
-	LockHeartbeat          time.Duration
+type TaskTimeoutConfig struct {
+	LeadershipTimeout time.Duration
+	LockTimeout       time.Duration
+	LockHeartbeat     time.Duration
 }
 
 // Stop gracefully stops the task, while also freeing most of its underlying resources.
@@ -52,7 +51,7 @@ type TaskFunc func(ctx context.Context, task *SynchronizedCronTask) error
 
 // CreateSynchronizedCronTask creates a new SynchronizedCronTask instance, or errors out
 // if the provided cron expression was invalid.
-func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronTaskConfig TaskConfig, taskFunc TaskFunc) (*SynchronizedCronTask, error) {
+func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronExpr string, timeoutConfig TaskTimeoutConfig, taskFunc TaskFunc) (*SynchronizedCronTask, error) {
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
 	synchronizedTask := &SynchronizedCronTask{
@@ -65,7 +64,7 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronT
 		shutdownFunc:       leadershipCancel,
 	}
 
-	if err := synchronizedTask.cron.AddFunc(cronTaskConfig.LeadershipCronInterval, func() {
+	if err := synchronizedTask.cron.AddFunc(cronExpr, func() {
 		if atomic.LoadInt32(synchronizedTask.electionInProgress) == electing {
 			logrus.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.Name)
 			return
@@ -78,14 +77,14 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronT
 
 		// --------------
 
-		leadershipContext, cancel := context.WithDeadline(shutdownCtx, time.Now().Add(cronTaskConfig.LeadershipTimeout))
+		leadershipContext, cancel := context.WithDeadline(shutdownCtx, time.Now().Add(timeoutConfig.LeadershipTimeout))
 		defer cancel()
 
 		start := time.Now()
 		if err := synchronizedTask.handleElectionAttempt(
 			leadershipContext,
-			cronTaskConfig.LockTimeout,
-			cronTaskConfig.LockHeartbeat,
+			timeoutConfig.LockTimeout,
+			timeoutConfig.LockHeartbeat,
 			taskFunc,
 		); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			logrus.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.Name, err)
