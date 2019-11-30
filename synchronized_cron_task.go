@@ -32,12 +32,6 @@ type SynchronizedCronTask struct {
 	shutdownFunc       func()
 }
 
-type TaskTimeoutConfig struct {
-	LeadershipTimeout time.Duration
-	LockTimeout       time.Duration
-	LockHeartbeat     time.Duration
-}
-
 // Stop gracefully stops the task, while also freeing most of its underlying resources.
 func (synchronizedCronTask *SynchronizedCronTask) Stop() {
 	synchronizedCronTask.shutdownFunc()
@@ -51,13 +45,13 @@ func (synchronizedCronTask *SynchronizedCronTask) Stop() {
 // TaskFunc is a function, that is called upon the cron firing.
 type TaskFunc func(ctx context.Context, task *SynchronizedCronTask) error
 
-// CreateSynchronizedCronTask creates a new SynchronizedCronTask instance, or errors out
+// NewSynchronizedCronTaskWithOptions creates a new SynchronizedCronTask instance, or errors out
 // if the provided cron expression was invalid.
-func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronExpr string, timeoutConfig TaskTimeoutConfig, taskFunc TaskFunc) (*SynchronizedCronTask, error) {
+func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc TaskFunc, options *TaskOptions) (*SynchronizedCronTask, error) {
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
 	synchronizedTask := &SynchronizedCronTask{
-		Name: name,
+		Name: options.Name,
 
 		cron:   cron.NewWithLocation(time.UTC),
 		locker: redislock.New(client),
@@ -68,7 +62,7 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 		shutdownFunc:       leadershipCancel,
 	}
 
-	if err := synchronizedTask.cron.AddFunc(cronExpr, func() {
+	if err := synchronizedTask.cron.AddFunc(options.CronExpression, func() {
 		if atomic.LoadInt32(synchronizedTask.electionInProgress) == electing {
 			synchronizedTask.logger.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.Name)
 			return
@@ -81,14 +75,14 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 
 		// --------------
 
-		leadershipContext, cancel := context.WithDeadline(shutdownCtx, time.Now().Add(timeoutConfig.LeadershipTimeout))
+		leadershipContext, cancel := context.WithDeadline(shutdownCtx, time.Now().Add(options.LeadershipTimeout))
 		defer cancel()
 
 		start := time.Now()
 		if err := synchronizedTask.handleElectionAttempt(
 			leadershipContext,
-			timeoutConfig.LockTimeout,
-			timeoutConfig.LockHeartbeat,
+			options.LockTimeout,
+			options.LockHeartbeat,
 			taskFunc,
 		); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.Name, err)
@@ -103,6 +97,26 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 	synchronizedTask.cron.Start()
 
 	return synchronizedTask, nil
+}
+
+// NewSynchronizedCronTask creates a new SynchronizedCronTask instance, or errors out
+// if the provided cron expression was invalid.
+func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, setters ...TaskOption) (*SynchronizedCronTask, error) {
+	// Default Options
+	args := &TaskOptions{
+		Name: "Default Synchronized Task",
+
+		CronExpression:    "0 * * * * *",
+		LeadershipTimeout: 30 * time.Second,
+		LockTimeout:       5 * time.Second,
+		LockHeartbeat:     1 * time.Second,
+	}
+
+	for _, setter := range setters {
+		setter(args)
+	}
+
+	return NewSynchronizedCronTaskWithOptions(client, taskFunc, args)
 }
 
 // ExecuteNow forces the cron to fire immediately. Locking is still
