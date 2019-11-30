@@ -26,6 +26,8 @@ type SynchronizedCronTask struct {
 	cron   *cron.Cron
 	locker *redislock.Client
 
+	logger *logrus.Logger
+
 	electionInProgress *int32
 	shutdownFunc       func()
 }
@@ -60,13 +62,15 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 		cron:   cron.NewWithLocation(time.UTC),
 		locker: redislock.New(client),
 
+		logger: logrus.StandardLogger(),
+
 		electionInProgress: new(int32),
 		shutdownFunc:       leadershipCancel,
 	}
 
 	if err := synchronizedTask.cron.AddFunc(cronExpr, func() {
 		if atomic.LoadInt32(synchronizedTask.electionInProgress) == electing {
-			logrus.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.Name)
+			synchronizedTask.logger.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.Name)
 			return
 		}
 
@@ -87,9 +91,9 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 			timeoutConfig.LockHeartbeat,
 			taskFunc,
 		); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
-			logrus.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.Name, err)
+			synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.Name, err)
 		} else {
-			logrus.Infof("Successfully filled executed task %q in %s", synchronizedTask.Name, time.Since(start))
+			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.Name, time.Since(start))
 		}
 	}); err != nil {
 		leadershipCancel()
@@ -105,7 +109,7 @@ func CreateSynchronizedCronTask(client redislock.RedisClient, name string, cronE
 // honored, so no concurrent task execution can be forced this way.
 func (synchronizedCronTask *SynchronizedCronTask) ExecuteNow() {
 	if synchronizedCronTask.cron == nil {
-		logrus.Warnf("Tried to force execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		synchronizedCronTask.logger.Warnf("Tried to force execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
 		return
 	}
 
@@ -115,7 +119,7 @@ func (synchronizedCronTask *SynchronizedCronTask) ExecuteNow() {
 // NextTime returns the next time the cron task will fire.
 func (synchronizedCronTask *SynchronizedCronTask) NextTime() time.Time {
 	if synchronizedCronTask.cron == nil {
-		logrus.Warnf("Tried to retrieve next execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		synchronizedCronTask.logger.Warnf("Tried to retrieve next execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
 		return time.Time{}
 	}
 
@@ -128,7 +132,7 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	lockHeartbeat time.Duration,
 	taskFunc TaskFunc,
 ) error {
-	logger := logrus.WithField("task_name", synchronizedCronTask.Name)
+	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.Name)
 
 	// Try to lock
 	logger.Tracef("Trying to temporarily gain leadership for synchronized task %q", synchronizedCronTask.Name)
