@@ -18,9 +18,9 @@ type TaskOptions struct {
 // TaskOption represents an option for a synchronized cron task.
 type TaskOption func(*TaskOptions)
 
-// Name sets the name of the synchronized cron task.
+// TaskName sets the name of the synchronized cron task.
 // The default is "Default Synchronized Task".
-func Name(name string) TaskOption {
+func TaskName(name string) TaskOption {
 	return func(c *TaskOptions) {
 		c.Name = name
 	}
