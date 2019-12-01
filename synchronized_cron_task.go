@@ -165,7 +165,7 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	defer func() {
 		logger.Tracef("Resigning temporary leadership for synchronized task %q", synchronizedCronTask.Name)
 		if err := lock.Release(); err != nil {
-			logger.Warnf("Failed to resign leadership for synchronized task %q - the service should be able to recover from this", synchronizedCronTask.Name)
+			logger.Warnf("Failed to resign leadership for synchronized task %q: %s - the service should be able to recover from this", synchronizedCronTask.Name, err)
 		}
 	}()
 
