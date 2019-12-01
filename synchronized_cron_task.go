@@ -21,7 +21,7 @@ const (
 //
 // It supports graceful shutdowns via its Stop() function.
 type SynchronizedCronTask struct {
-	Name string
+	name string
 
 	cron   *cron.Cron
 	locker *redislock.Client
@@ -30,6 +30,11 @@ type SynchronizedCronTask struct {
 
 	electionInProgress *int32
 	shutdownFunc       func()
+}
+
+// Name returns the name of the task.
+func (synchronizedCronTask *SynchronizedCronTask) Name() string {
+	return synchronizedCronTask.name
 }
 
 // Stop gracefully stops the task, while also freeing most of its underlying resources.
@@ -43,7 +48,13 @@ func (synchronizedCronTask *SynchronizedCronTask) Stop() {
 }
 
 // TaskFunc is a function, that is called upon the cron firing.
-type TaskFunc func(ctx context.Context, task *SynchronizedCronTask) error
+type TaskFunc func(ctx context.Context, task Task) error
+
+// Task is an abstraction of a running task.
+type Task interface {
+	Name() string
+	NextTime() time.Time
+}
 
 // NewSynchronizedCronTaskWithOptions creates a new SynchronizedCronTask instance, or errors out
 // if the provided cron expression was invalid.
@@ -51,7 +62,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
 	synchronizedTask := &SynchronizedCronTask{
-		Name: options.Name,
+		name: options.Name,
 
 		cron:   cron.NewWithLocation(time.UTC),
 		locker: redislock.New(client),
@@ -64,7 +75,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 
 	if err := synchronizedTask.cron.AddFunc(options.CronExpression, func() {
 		if atomic.LoadInt32(synchronizedTask.electionInProgress) == electing {
-			synchronizedTask.logger.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.Name)
+			synchronizedTask.logger.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.name)
 			return
 		}
 
@@ -85,9 +96,9 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 			options.LockHeartbeat,
 			taskFunc,
 		); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
-			synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.Name, err)
+			synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.name, err)
 		} else {
-			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.Name, time.Since(start))
+			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.name, time.Since(start))
 		}
 	}); err != nil {
 		leadershipCancel()
@@ -123,7 +134,7 @@ func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, se
 // honored, so no concurrent task execution can be forced this way.
 func (synchronizedCronTask *SynchronizedCronTask) ExecuteNow() {
 	if synchronizedCronTask.cron == nil {
-		synchronizedCronTask.logger.Warnf("Tried to force execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		synchronizedCronTask.logger.Warnf("Tried to force execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.name)
 		return
 	}
 
@@ -133,7 +144,7 @@ func (synchronizedCronTask *SynchronizedCronTask) ExecuteNow() {
 // NextTime returns the next time the cron task will fire.
 func (synchronizedCronTask *SynchronizedCronTask) NextTime() time.Time {
 	if synchronizedCronTask.cron == nil {
-		synchronizedCronTask.logger.Warnf("Tried to retrieve next execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.Name)
+		synchronizedCronTask.logger.Warnf("Tried to retrieve next execution of synchronized cron task %s, which was already stopped.", synchronizedCronTask.name)
 		return time.Time{}
 	}
 
@@ -146,13 +157,13 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	lockHeartbeat time.Duration,
 	taskFunc TaskFunc,
 ) error {
-	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.Name)
+	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.name)
 
 	// Try to lock
-	logger.Tracef("Trying to temporarily gain leadership for synchronized task %q", synchronizedCronTask.Name)
+	logger.Tracef("Trying to temporarily gain leadership for synchronized task %q", synchronizedCronTask.name)
 
 	lock, err := synchronizedCronTask.locker.Obtain(
-		fmt.Sprintf("%s.lock", synchronizedCronTask.Name),
+		fmt.Sprintf("%s.lock", synchronizedCronTask.name),
 		lockTimeout,
 		&redislock.Options{
 			Context: ctx,
@@ -163,9 +174,9 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	}
 
 	defer func() {
-		logger.Tracef("Resigning temporary leadership for synchronized task %q", synchronizedCronTask.Name)
+		logger.Tracef("Resigning temporary leadership for synchronized task %q", synchronizedCronTask.name)
 		if err := lock.Release(); err != nil {
-			logger.Warnf("Failed to resign leadership for synchronized task %q: %s - the service should be able to recover from this", synchronizedCronTask.Name, err)
+			logger.Warnf("Failed to resign leadership for synchronized task %q: %s - the service should be able to recover from this", synchronizedCronTask.name, err)
 		}
 	}()
 
@@ -189,7 +200,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 	doneChannel chan error, ticker *time.Ticker,
 	lock *redislock.Lock, lockTimeout time.Duration,
 ) error {
-	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.Name)
+	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.name)
 
 	for {
 		select {
@@ -197,7 +208,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 			return ctx.Err()
 		case err := <-doneChannel:
 			if err != nil {
-				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.Name, err)
+				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.name, err)
 			}
 
 			return nil
@@ -208,11 +219,11 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 			}); err != nil {
 				return fmt.Errorf(
 					"failed to renew leadership for synchronized task %q lock while executing: %w - crudely canceling",
-					synchronizedCronTask.Name, err,
+					synchronizedCronTask.name, err,
 				)
 			}
 
-			logger.Debugf("Renewed leadership lock for long running synchronized task %q fill", synchronizedCronTask.Name)
+			logger.Debugf("Renewed leadership lock for long running synchronized task %q fill", synchronizedCronTask.name)
 		}
 	}
 }

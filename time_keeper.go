@@ -61,7 +61,7 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *TimeKeeperOptions) 
 		timeKeeper.cleanupTask, _ = NewSynchronizedCronTask(
 			client,
 
-			timeKeeper.WrapCronTask(func(ctx context.Context, task *SynchronizedCronTask) error {
+			timeKeeper.WrapCronTask(func(ctx context.Context, task Task) error {
 				return timeKeeper.cleanUpOldTaskRuns(ctx)
 			}),
 
@@ -98,7 +98,7 @@ func NewTimeKeeper(client *redis.Client, setters ...TimeKeeperOption) *TimeKeepe
 // Actual tracking is done via the task, which is provided as part of the
 // wrapped function.
 func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc TaskFunc) TaskFunc {
-	return func(ctx context.Context, task *SynchronizedCronTask) error {
+	return func(ctx context.Context, task Task) error {
 		lastExec := time.Now()
 		taskErr := taskFunc(ctx, task)
 		lastDuration := time.Now().Sub(lastExec)
@@ -106,7 +106,7 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc TaskFunc) TaskFunc {
 		if timeKeeper.keepTaskList || timeKeeper.keepLastTask {
 			if _, err := timeKeeper.client.TxPipelined(func(pipeliner redis.Pipeliner) error {
 				execution := &ExecutionResult{
-					Name:          task.Name,
+					Name:          task.Name(),
 					LastExecution: lastExec,
 					NextExecution: task.NextTime(),
 					LastDuration:  lastDuration,
@@ -114,7 +114,7 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc TaskFunc) TaskFunc {
 				}
 
 				if timeKeeper.keepLastTask {
-					pipeliner.HSet(timeKeeper.redisLastExecName, task.Name, execution)
+					pipeliner.HSet(timeKeeper.redisLastExecName, task.Name(), execution)
 				}
 
 				if timeKeeper.keepTaskList {
