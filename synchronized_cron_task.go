@@ -182,10 +182,19 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 		doneChannel <- taskFunc(wrappedContext, synchronizedCronTask)
 	}()
 
+	return synchronizedCronTask.blockForFinish(wrappedContext, doneChannel, ticker, lock, lockTimeout)
+}
+
+func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Context,
+	doneChannel chan error, ticker *time.Ticker,
+	lock *redislock.Lock, lockTimeout time.Duration,
+) error {
+	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.Name)
+
 	for {
 		select {
-		case <-wrappedContext.Done():
-			return wrappedContext.Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		case err := <-doneChannel:
 			if err != nil {
 				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.Name, err)
