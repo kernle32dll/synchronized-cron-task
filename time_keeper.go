@@ -179,7 +179,7 @@ func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context) error {
 func (timeKeeper *TimeKeeper) GetAllRuns(ctx context.Context, offset, limit int64) ([]ExecutionResult, error) {
 	client := timeKeeper.client.WithContext(ctx)
 
-	results, err := client.LRange(timeKeeper.redisExecListName, offset, limit).Result()
+	results, err := client.LRange(timeKeeper.redisExecListName, offset, offset+limit-1).Result()
 	if err != nil {
 		return nil, err
 	}
