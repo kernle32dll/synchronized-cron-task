@@ -26,17 +26,24 @@ type executionResultInternal struct {
 	NextExecution time.Time
 	LastDuration  time.Duration
 
-	Error string
+	Error *string
 }
 
 // MarshalBinary marshalls the ExecutionResult in JSON.
 func (p ExecutionResult) MarshalBinary() ([]byte, error) {
+	var errorString *string = nil
+
+	if p.Error != nil {
+		errorString = new(string)
+		*errorString = p.Error.Error()
+	}
+
 	return json.Marshal(executionResultInternal{
 		Name:          p.Name,
 		LastExecution: p.LastExecution,
 		NextExecution: p.NextExecution,
 		LastDuration:  p.LastDuration,
-		Error:         p.Error.Error(),
+		Error:         errorString,
 	})
 }
 
@@ -51,7 +58,12 @@ func (p *ExecutionResult) UnmarshalBinary(data []byte) error {
 	p.LastExecution = exec.LastExecution
 	p.NextExecution = exec.NextExecution
 	p.LastDuration = exec.LastDuration
-	p.Error = errors.New(exec.Error)
+
+	if exec.Error != nil {
+		p.Error = errors.New(*exec.Error)
+	} else {
+		p.Error = nil
+	}
 
 	return nil
 }
