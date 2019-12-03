@@ -15,7 +15,10 @@ jobs:
 
 os:
   - linux
-  - osx
+
+arch:
+  - amd64
+  - arm64
 
 env:
   global:
