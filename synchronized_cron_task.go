@@ -218,7 +218,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 				Context: ctx,
 			}); err != nil {
 				return fmt.Errorf(
-					"failed to renew leadership for synchronized task %q lock while executing: %w - crudely canceling",
+					renewalErrorFormat,
 					synchronizedCronTask.name, err,
 				)
 			}
