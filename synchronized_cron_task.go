@@ -208,7 +208,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 			return ctx.Err()
 		case err := <-doneChannel:
 			if err != nil {
-				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.name, err)
+				return fmt.Errorf(cronErrorFormat, synchronizedCronTask.name, err)
 			}
 
 			return nil
