@@ -29,5 +29,5 @@ Detailed documentation can be found on [GoDoc](https://godoc.org/github.com/kern
 
 This project consists of two tightly intertwined functionalities. [SynchronizedCronTask](./synchronized_cron_task.go), and [TimeKeeper](./time_keeper.go).
 
-The former is the hard of the project, providing the mentioned synchronized cron execution. The latter can optionally used to collect data
-about `SynchronizedCronTask` executions, such as run time or errors (if any).
+The former is the heart of the project, providing the mentioned synchronized cron execution. The latter can optionally be used to collect data
+about individual `SynchronizedCronTask` executions, such as run time or errors (if any).
