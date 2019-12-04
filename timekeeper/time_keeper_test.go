@@ -1,8 +1,7 @@
-package timekeeper_test
+package timekeeper
 
 import (
 	crontask "github.com/kernle32dll/synchronized-cron-task"
-	"github.com/kernle32dll/synchronized-cron-task/timekeeper"
 
 	"github.com/go-redis/redis/v7"
 	"github.com/testcontainers/testcontainers-go"
@@ -40,26 +39,73 @@ func Test_TimeKeeper(t *testing.T) {
 		t.Run(fmt.Sprintf("redis:%s", version), func(t *testing.T) {
 			t.Parallel()
 
-			client, closer := getRedisClient(t, version)
-			defer func() {
-				if err := client.Close(); err != nil {
-					t.Logf("unexpected error shutting down redis client: %s", err)
-				}
-
-				if err := closer(context.Background()); err != nil {
-					t.Logf("unexpected error shutting down redis container: %s", err)
-				}
-			}()
-
 			t.Run("Retrieval", func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := getRedisClient(t, version)
+				defer func() {
+					if err := client.Close(); err != nil {
+						t.Logf("unexpected error shutting down redis client: %s", err)
+					}
+
+					if err := closer(context.Background()); err != nil {
+						t.Logf("unexpected error shutting down redis container: %s", err)
+					}
+				}()
+
 				testTimeKeeperRetrieval(t, client)
+			})
+
+			t.Run("CleanUp", func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := getRedisClient(t, version)
+				defer func() {
+					if err := client.Close(); err != nil {
+						t.Logf("unexpected error shutting down redis client: %s", err)
+					}
+
+					if err := closer(context.Background()); err != nil {
+						t.Logf("unexpected error shutting down redis container: %s", err)
+					}
+				}()
+
+				timeKeeper := NewTimeKeeper(client, CleanUpTask(client, CleanUpTasksTimeOut(0)))
+				defer timeKeeper.Stop()
+
+				testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
+					return nil
+				})
+
+				// add a task
+				task := &TaskMock{NameVal: "example1", NextTimeVal: time.Now().Add(time.Hour * 24)}
+				if err := testFunc(context.Background(), task); err != nil {
+					t.Fatal(err)
+				}
+
+				count, err := timeKeeper.CountTasks(context.Background())
+				if err != nil {
+					t.Fatalf("unexpected error %q", err)
+				}
+
+				if expected := int64(1); count != expected {
+					t.Fatalf("expected count %d as test prerequisite, but got %d", expected, count)
+				}
+
+				timeKeeper.cleanupTask.ExecuteNow()
+				time.Sleep(time.Second)
+
+				count, err = timeKeeper.CountAllRuns(context.Background())
+				if expected := int64(1); count != expected {
+					t.Fatalf("expected count %d, but got %d", expected, count)
+				}
 			})
 		})
 	}
 }
 
 func testTimeKeeperRetrieval(t *testing.T, client *redis.Client) {
-	timeKeeper := timekeeper.NewTimeKeeper(client, timekeeper.CleanUpTask(nil))
+	timeKeeper := NewTimeKeeper(client, CleanUpTask(nil))
 	defer timeKeeper.Stop()
 
 	testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
