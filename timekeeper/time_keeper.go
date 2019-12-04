@@ -32,7 +32,10 @@ type TimeKeeper struct {
 // This has no practical implications, other than inevitably stopping the internal cleanup task,
 // which periodically removes timed out task executions.
 func (timeKeeper *TimeKeeper) Stop() {
-	timeKeeper.cleanupTask.Stop()
+	if timeKeeper.cleanupTask != nil {
+		timeKeeper.cleanupTask.Stop()
+		timeKeeper.cleanupTask = nil
+	}
 }
 
 // NewTimeKeeperWithOptions creates a new TimeKeeper instance.
