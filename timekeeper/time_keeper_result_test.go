@@ -1,10 +1,10 @@
-package crontask_test
+package timekeeper_test
 
 import (
-	crontask "github.com/kernle32dll/synchronized-cron-task"
-	"reflect"
+	"github.com/kernle32dll/synchronized-cron-task/timekeeper"
 
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -18,10 +18,10 @@ const exampleJson = "{" +
 	"\"Error\":\"some-error\"" +
 	"}"
 
-// Tests that the TimeKeeperRedisPrefix option correctly applies.
+// Tests that the RedisPrefix option correctly applies.
 func Test_ExecutionResult_MarshalBinary(t *testing.T) {
 	// given
-	option := &crontask.ExecutionResult{
+	option := &timekeeper.ExecutionResult{
 		Name:          "some-task",
 		LastExecution: time.Date(1991, 5, 23, 1, 2, 3, 4, time.UTC),
 		NextExecution: time.Date(1991, 5, 23, 1, 2, 3, 4, time.UTC),
@@ -43,10 +43,10 @@ func Test_ExecutionResult_MarshalBinary(t *testing.T) {
 	}
 }
 
-// Tests that the TimeKeeperRedisPrefix option correctly applies.
+// Tests that the RedisPrefix option correctly applies.
 func Test_ExecutionResult_UnmarshalBinary(t *testing.T) {
 	// given
-	option := &crontask.ExecutionResult{}
+	option := &timekeeper.ExecutionResult{}
 
 	// when
 	err := option.UnmarshalBinary([]byte(exampleJson))
@@ -56,7 +56,7 @@ func Test_ExecutionResult_UnmarshalBinary(t *testing.T) {
 		t.Errorf("unexpected error, got %s", err)
 	}
 
-	expected := &crontask.ExecutionResult{
+	expected := &timekeeper.ExecutionResult{
 		Name:          "some-task",
 		LastExecution: time.Date(1991, 5, 23, 1, 2, 3, 4, time.UTC),
 		NextExecution: time.Date(1991, 5, 23, 1, 2, 3, 4, time.UTC),
@@ -68,10 +68,10 @@ func Test_ExecutionResult_UnmarshalBinary(t *testing.T) {
 	}
 }
 
-// Tests that the TimeKeeperRedisPrefix option correctly applies.
+// Tests that the RedisPrefix option correctly applies.
 func Test_ExecutionResult_UnmarshalBinary_error(t *testing.T) {
 	// given
-	option := &crontask.ExecutionResult{}
+	option := &timekeeper.ExecutionResult{}
 
 	// when
 	err := option.UnmarshalBinary([]byte("invalid"))
@@ -81,7 +81,7 @@ func Test_ExecutionResult_UnmarshalBinary_error(t *testing.T) {
 		t.Error("expected error, got nil")
 	}
 
-	expected := &crontask.ExecutionResult{}
+	expected := &timekeeper.ExecutionResult{}
 	if !reflect.DeepEqual(option, expected) {
 		t.Errorf("unexpected marshalling result, got %q, wanted %q", option, expected)
 	}

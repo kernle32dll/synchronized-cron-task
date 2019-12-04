@@ -1,6 +1,8 @@
-package crontask
+package timekeeper
 
 import (
+	"github.com/kernle32dll/synchronized-cron-task"
+
 	"github.com/go-redis/redis/v7"
 	"github.com/sirupsen/logrus"
 
@@ -25,7 +27,7 @@ type TimeKeeper struct {
 
 	taskListTimeOut time.Duration
 
-	cleanupTask *SynchronizedCronTask
+	cleanupTask *crontask.SynchronizedCronTask
 }
 
 // Stop gracefully stops the time keeper, while also freeing some of its underlying resources.
@@ -36,7 +38,7 @@ func (timeKeeper *TimeKeeper) Stop() {
 }
 
 // NewTimeKeeperWithOptions creates a new TimeKeeper instance.
-func NewTimeKeeperWithOptions(client *redis.Client, options *TimeKeeperOptions) *TimeKeeper {
+func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeeper {
 	if !options.KeepTaskList && !options.KeepLastTask {
 		logrus.Warn(
 			"Time keeper is configured to neither keep the last task nor a task list. This means, this time keeper is a no-op!",
@@ -58,15 +60,15 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *TimeKeeperOptions) 
 	}
 
 	if options.KeepTaskList {
-		timeKeeper.cleanupTask, _ = NewSynchronizedCronTask(
+		timeKeeper.cleanupTask, _ = crontask.NewSynchronizedCronTask(
 			client,
 
-			timeKeeper.WrapCronTask(func(ctx context.Context, task Task) error {
+			timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
 				return timeKeeper.cleanUpOldTaskRuns(ctx)
 			}),
 
-			TaskName(fmt.Sprintf("%s.executions.cleanup", options.RedisPrefix)),
-			CronExpression("0 * * * * *"),
+			crontask.TaskName(fmt.Sprintf("%s.executions.cleanup", options.RedisPrefix)),
+			crontask.CronExpression("0 * * * * *"),
 		)
 	}
 
@@ -74,9 +76,9 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *TimeKeeperOptions) 
 }
 
 // NewTimeKeeper creates a new TimeKeeper instance.
-func NewTimeKeeper(client *redis.Client, setters ...TimeKeeperOption) *TimeKeeper {
+func NewTimeKeeper(client *redis.Client, setters ...Option) *TimeKeeper {
 	// Default Options
-	args := &TimeKeeperOptions{
+	args := &Options{
 		RedisPrefix:       "timekeeper",
 		RedisExecListName: "executions.list",
 		RedisLastExecName: "executions.aggregation",
@@ -97,8 +99,8 @@ func NewTimeKeeper(client *redis.Client, setters ...TimeKeeperOption) *TimeKeepe
 // WrapCronTask registers a TaskFunc to be recorded via this time keeper.
 // Actual tracking is done via the task, which is provided as part of the
 // wrapped function.
-func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc TaskFunc) TaskFunc {
-	return func(ctx context.Context, task Task) error {
+func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.TaskFunc {
+	return func(ctx context.Context, task crontask.Task) error {
 		lastExec := time.Now()
 		taskErr := taskFunc(ctx, task)
 		lastDuration := time.Now().Sub(lastExec)
