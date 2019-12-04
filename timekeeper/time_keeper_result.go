@@ -17,6 +17,13 @@ type ExecutionResult struct {
 	Error error
 }
 
+// ExecutionResultSlice implements sort.Interface based on the Name field.
+type ExecutionResultSlice []ExecutionResult
+
+func (a ExecutionResultSlice) Len() int           { return len(a) }
+func (a ExecutionResultSlice) Less(i, j int) bool { return a[i].Name < a[j].Name }
+func (a ExecutionResultSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
 // executionResultInternal is an internal wrapper, to allow
 // correct un-/marshalling of errors.
 type executionResultInternal struct {

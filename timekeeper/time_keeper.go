@@ -8,6 +8,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"sort"
 	"time"
 )
 
@@ -221,7 +222,15 @@ func (timeKeeper *TimeKeeper) GetLastRunOfAllTasks(ctx context.Context) ([]Execu
 		i++
 	}
 
-	return unmarshalExecutionResults(results...)
+	resultList, err := unmarshalExecutionResults(results...)
+	if err != nil {
+		return nil, nil
+	}
+
+	sliceList := ExecutionResultSlice(resultList)
+	sort.Sort(sliceList)
+
+	return sliceList, nil
 }
 
 // CountTasks returns the amount of individual tasks recorded by the time keeper.
