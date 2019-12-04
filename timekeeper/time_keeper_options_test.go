@@ -1,24 +1,10 @@
 package timekeeper
 
 import (
+	"github.com/go-redis/redis/v7"
 	"testing"
 	"time"
 )
-
-// Tests that the RedisPrefix option correctly applies.
-func Test_TimeKeeperOption_RedisPrefix(t *testing.T) {
-	// given
-	option := RedisPrefix("bar")
-	options := &Options{RedisPrefix: "foo"}
-
-	// when
-	option(options)
-
-	// then
-	if options.RedisPrefix != "bar" {
-		t.Errorf("redis prefix not correctly applied, got %s", options.RedisPrefix)
-	}
-}
 
 // Tests that the RedisExecListName option correctly applies.
 func Test_TimeKeeperOption_RedisExecListName(t *testing.T) {
@@ -80,17 +66,44 @@ func Test_TimeKeeperOption_KeepLastTask(t *testing.T) {
 	}
 }
 
-// Tests that the TaskListTimeOut option correctly applies.
-func Test_TimeKeeperOption_ListTimeOut(t *testing.T) {
-	// given
-	option := TaskListTimeOut(time.Second)
-	options := &Options{TaskListTimeOut: time.Hour}
+// Tests that the TasksTimeOut option correctly applies.
+func Test_TimeKeeperOption_CleanUpTask(t *testing.T) {
+	t.Run("Enable", func(t *testing.T) {
+		// given
+		someClient := &redis.Client{}
+		option := CleanUpTask(someClient, CleanUpTaskName("test"), CleanUpTasksTimeOut(time.Hour))
+		options := &Options{CleanUpTask: nil}
 
-	// when
-	option(options)
+		// when
+		option(options)
 
-	// then
-	if options.TaskListTimeOut != time.Second {
-		t.Errorf("task list timeout not correctly applied, got %s", options.TaskListTimeOut)
-	}
+		// then
+		if options.CleanUpTask == nil {
+			t.Fatal("clean up task not correctly applied, got nil")
+		}
+
+		if options.CleanUpTask.Client != someClient {
+			t.Error("clean up task client not correctly applied")
+		}
+		if options.CleanUpTask.TaskName != "test" {
+			t.Errorf("clean up task name not correctly applied, got %q", options.CleanUpTask.TaskName)
+		}
+		if options.CleanUpTask.TasksTimeOut != time.Hour {
+			t.Errorf("clean up task time out not correctly applied, got %q", options.CleanUpTask.TasksTimeOut)
+		}
+	})
+
+	t.Run("Disable", func(t *testing.T) {
+		// given
+		option := CleanUpTask(nil)
+		options := &Options{CleanUpTask: &CleanUpOptions{Client: &redis.Client{}}}
+
+		// when
+		option(options)
+
+		// then
+		if options.CleanUpTask != nil {
+			t.Error("clean up task not correctly applied, got non-nil")
+		}
+	})
 }

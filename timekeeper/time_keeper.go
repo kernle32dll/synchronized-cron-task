@@ -8,7 +8,6 @@ import (
 
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -24,8 +23,6 @@ type TimeKeeper struct {
 
 	keepTaskList bool
 	keepLastTask bool
-
-	taskListTimeOut time.Duration
 
 	cleanupTask *crontask.SynchronizedCronTask
 }
@@ -48,28 +45,31 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeepe
 	timeKeeper := &TimeKeeper{
 		client: client,
 
-		redisExecListName: fmt.Sprintf("%s.%s", options.RedisPrefix, options.RedisExecListName),
-		redisLastExecName: fmt.Sprintf("%s.%s", options.RedisPrefix, options.RedisLastExecName),
+		redisExecListName: options.RedisExecListName,
+		redisLastExecName: options.RedisLastExecName,
 
 		keepTaskList: options.KeepTaskList,
 		keepLastTask: options.KeepLastTask,
 
-		taskListTimeOut: options.TaskListTimeOut,
-
+		// init below
 		cleanupTask: nil,
 	}
 
-	if options.KeepTaskList {
-		timeKeeper.cleanupTask, _ = crontask.NewSynchronizedCronTask(
-			client,
+	if options.CleanUpTask != nil {
+		if options.CleanUpTask.Client != nil {
+			timeKeeper.cleanupTask, _ = crontask.NewSynchronizedCronTask(
+				options.CleanUpTask.Client,
 
-			timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
-				return timeKeeper.cleanUpOldTaskRuns(ctx)
-			}),
+				timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
+					return timeKeeper.cleanUpOldTaskRuns(ctx, options.CleanUpTask.Client, options.CleanUpTask.TasksTimeOut)
+				}),
 
-			crontask.TaskName(fmt.Sprintf("%s.executions.cleanup", options.RedisPrefix)),
-			crontask.CronExpression("0 * * * * *"),
-		)
+				crontask.TaskName(options.CleanUpTask.TaskName),
+				crontask.CronExpression("0 * * * * *"),
+			)
+		} else {
+			logrus.Error("Specified clean up task for time keeper, but provided no redis client - disabling task.")
+		}
 	}
 
 	return timeKeeper
@@ -79,15 +79,15 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeepe
 func NewTimeKeeper(client *redis.Client, setters ...Option) *TimeKeeper {
 	// Default Options
 	args := &Options{
-		RedisPrefix:       "timekeeper",
-		RedisExecListName: "executions.list",
-		RedisLastExecName: "executions.aggregation",
+		RedisExecListName: "timekeeper.executions.list",
+		RedisLastExecName: "timekeeper.executions.aggregation",
 
 		KeepTaskList: true,
 		KeepLastTask: true,
-
-		TaskListTimeOut: 30 * (24 * time.Hour),
 	}
+
+	// Enable default cleanup task
+	CleanUpTask(client)(args)
 
 	for _, setter := range setters {
 		setter(args)
@@ -139,12 +139,12 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 	}
 }
 
-func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context) error {
-	timeOutPoint := time.Now().Add(-timeKeeper.taskListTimeOut)
-	client := timeKeeper.client.WithContext(ctx)
+func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context, client *redis.Client, taskListTimeOut time.Duration) error {
+	timeOutPoint := time.Now().Add(-taskListTimeOut)
+	ctxClient := client.WithContext(ctx)
 
 	for {
-		lastElemList, err := client.LRange(timeKeeper.redisExecListName, -1, -1).Result()
+		lastElemList, err := ctxClient.LRange(timeKeeper.redisExecListName, -1, -1).Result()
 		if err != nil {
 			return nil
 		}
@@ -164,7 +164,7 @@ func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context) error {
 		if execResult.LastExecution.Before(timeOutPoint) {
 			// Note, its always safe to rpop, as we only lpush, and thus never
 			// interfere with the end of the list
-			if err := client.RPop(timeKeeper.redisExecListName).Err(); err != nil {
+			if err := ctxClient.RPop(timeKeeper.redisExecListName).Err(); err != nil {
 				return err
 			}
 
