@@ -41,128 +41,141 @@ func Test_TimeKeeper(t *testing.T) {
 			t.Parallel()
 
 			client, closer := getRedisClient(t, version)
-			defer closer(context.Background())
+			defer func() {
+				if err := client.Close(); err != nil {
+					t.Logf("unexpected error shutting down redis client: %s", err)
+				}
 
-			timeKeeper := timekeeper.NewTimeKeeper(client, timekeeper.CleanUpTask(nil))
-
-			testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
-				return nil
-			})
-
-			nextTime := time.Now().Add(time.Hour * 24)
-
-			// example1 is executed once
-			task1 := &TaskMock{NameVal: "example1", NextTimeVal: nextTime}
-			if err := testFunc(context.Background(), task1); err != nil {
-				t.Fatal(err)
-			}
-
-			// example2 is executed twice
-			task2 := &TaskMock{NameVal: "example2", NextTimeVal: nextTime}
-			if err := testFunc(context.Background(), task2); err != nil {
-				t.Fatal(err)
-			}
-			minTimeOfSecondExec := time.Now()
-			if err := testFunc(context.Background(), task2); err != nil {
-				t.Fatal(err)
-			}
+				if err := closer(context.Background()); err != nil {
+					t.Logf("unexpected error shutting down redis container: %s", err)
+				}
+			}()
 
 			t.Run("Retrieval", func(t *testing.T) {
-				t.Run("CountAllRuns", func(t *testing.T) {
-					count, err := timeKeeper.CountAllRuns(context.Background())
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					if expected := int64(3); count != expected {
-						t.Fatalf("expected count %d, but got %d", expected, count)
-					}
-				})
-
-				t.Run("CountTasks", func(t *testing.T) {
-					count, err := timeKeeper.CountTasks(context.Background())
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					if expected := int64(2); count != expected {
-						t.Fatalf("expected count %d, but got %d", expected, count)
-					}
-				})
-
-				t.Run("GetAllRuns", func(t *testing.T) {
-					runs, err := timeKeeper.GetAllRuns(context.Background(), 0, 1)
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					count := len(runs)
-					if expected := 1; count != expected {
-						t.Fatalf("expected count of runs %d, but got %d", expected, count)
-					}
-
-					run := runs[0]
-					if expected := task2.NameVal; run.Name != expected {
-						t.Errorf("expected run name %q, but got %q", expected, run.Name)
-					}
-				})
-
-				t.Run("GetAllRuns_offset", func(t *testing.T) {
-					runs, err := timeKeeper.GetAllRuns(context.Background(), 2, 1)
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					count := len(runs)
-					if expected := 1; count != expected {
-						t.Fatalf("expected count of runs %d, but got %d", expected, count)
-					}
-
-					run := runs[0]
-					if expected := task1.NameVal; run.Name != expected {
-						t.Errorf("expected run name %q, but got %q", expected, run.Name)
-					}
-				})
-
-				t.Run("GetLastRunOfAllTasks", func(t *testing.T) {
-					runs, err := timeKeeper.GetLastRunOfAllTasks(context.Background())
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					count := len(runs)
-					if expected := 2; count != expected {
-						t.Fatalf("expected count of runs %d, but got %d", expected, count)
-					}
-
-					run1 := runs[0]
-					if expected := task1.NameVal; run1.Name != expected {
-						t.Errorf("expected task 1 name %q, but got %q", expected, run1.Name)
-					}
-
-					run2 := runs[1]
-					if expected := task2.NameVal; run2.Name != expected {
-						t.Errorf("expected task 2 name %q, but got %q", expected, run2.Name)
-					}
-				})
-
-				t.Run("GetLastRunOfTask", func(t *testing.T) {
-					result, err := timeKeeper.GetLastRunOfTask(context.Background(), task2.Name())
-					if err != nil {
-						t.Fatalf("unexpected error %q", err)
-					}
-
-					if expected := task2.NameVal; result.Name != expected {
-						t.Errorf("expected task 1 name %q, but got %q", expected, result.Name)
-					}
-
-					if expected := minTimeOfSecondExec; result.LastExecution.Before(expected) {
-						t.Errorf("expected execution time does not match - expected > %q, but got %q", expected, result.LastExecution)
-					}
-				})
+				testTimeKeeperRetrieval(t, client)
 			})
 		})
 	}
+}
+
+func testTimeKeeperRetrieval(t *testing.T, client *redis.Client) {
+	timeKeeper := timekeeper.NewTimeKeeper(client, timekeeper.CleanUpTask(nil))
+	defer timeKeeper.Stop()
+
+	testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
+		return nil
+	})
+
+	nextTime := time.Now().Add(time.Hour * 24)
+
+	// example1 is executed once
+	task1 := &TaskMock{NameVal: "example1", NextTimeVal: nextTime}
+	if err := testFunc(context.Background(), task1); err != nil {
+		t.Fatal(err)
+	}
+
+	// example2 is executed twice
+	task2 := &TaskMock{NameVal: "example2", NextTimeVal: nextTime}
+	if err := testFunc(context.Background(), task2); err != nil {
+		t.Fatal(err)
+	}
+	minTimeOfSecondExec := time.Now()
+	if err := testFunc(context.Background(), task2); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("CountAllRuns", func(t *testing.T) {
+		count, err := timeKeeper.CountAllRuns(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		if expected := int64(3); count != expected {
+			t.Fatalf("expected count %d, but got %d", expected, count)
+		}
+	})
+
+	t.Run("CountTasks", func(t *testing.T) {
+		count, err := timeKeeper.CountTasks(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		if expected := int64(2); count != expected {
+			t.Fatalf("expected count %d, but got %d", expected, count)
+		}
+	})
+
+	t.Run("GetAllRuns", func(t *testing.T) {
+		runs, err := timeKeeper.GetAllRuns(context.Background(), 0, 1)
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		count := len(runs)
+		if expected := 1; count != expected {
+			t.Fatalf("expected count of runs %d, but got %d", expected, count)
+		}
+
+		run := runs[0]
+		if expected := task2.NameVal; run.Name != expected {
+			t.Errorf("expected run name %q, but got %q", expected, run.Name)
+		}
+	})
+
+	t.Run("GetAllRuns_offset", func(t *testing.T) {
+		runs, err := timeKeeper.GetAllRuns(context.Background(), 2, 1)
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		count := len(runs)
+		if expected := 1; count != expected {
+			t.Fatalf("expected count of runs %d, but got %d", expected, count)
+		}
+
+		run := runs[0]
+		if expected := task1.NameVal; run.Name != expected {
+			t.Errorf("expected run name %q, but got %q", expected, run.Name)
+		}
+	})
+
+	t.Run("GetLastRunOfAllTasks", func(t *testing.T) {
+		runs, err := timeKeeper.GetLastRunOfAllTasks(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		count := len(runs)
+		if expected := 2; count != expected {
+			t.Fatalf("expected count of runs %d, but got %d", expected, count)
+		}
+
+		run1 := runs[0]
+		if expected := task1.NameVal; run1.Name != expected {
+			t.Errorf("expected task 1 name %q, but got %q", expected, run1.Name)
+		}
+
+		run2 := runs[1]
+		if expected := task2.NameVal; run2.Name != expected {
+			t.Errorf("expected task 2 name %q, but got %q", expected, run2.Name)
+		}
+	})
+
+	t.Run("GetLastRunOfTask", func(t *testing.T) {
+		result, err := timeKeeper.GetLastRunOfTask(context.Background(), task2.Name())
+		if err != nil {
+			t.Fatalf("unexpected error %q", err)
+		}
+
+		if expected := task2.NameVal; result.Name != expected {
+			t.Errorf("expected task 1 name %q, but got %q", expected, result.Name)
+		}
+
+		if expected := minTimeOfSecondExec; result.LastExecution.Before(expected) {
+			t.Errorf("expected execution time does not match - expected > %q, but got %q", expected, result.LastExecution)
+		}
+	})
 }
 
 func getRedisClient(t *testing.T, version string) (*redis.Client, func(context.Context) error) {
