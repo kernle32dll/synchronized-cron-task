@@ -227,7 +227,7 @@ func (timeKeeper *TimeKeeper) GetLastRunOfAllTasks(ctx context.Context) ([]Execu
 
 	resultList, err := unmarshalExecutionResults(results...)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	sliceList := ExecutionResultSlice(resultList)
