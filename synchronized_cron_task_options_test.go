@@ -1,6 +1,7 @@
 package crontask
 
 import (
+	"github.com/sirupsen/logrus"
 	"testing"
 	"time"
 )
@@ -32,6 +33,21 @@ func Test_TaskOption_CronExpression(t *testing.T) {
 	// then
 	if options.CronExpression != "bar" {
 		t.Errorf("cron expression not correctly applied, got %s", options.CronExpression)
+	}
+}
+
+// Tests that the Logger option correctly applies.
+func Test_TaskOption_Logger(t *testing.T) {
+	// given
+	option := Logger(&logrus.Logger{})
+	options := &TaskOptions{Logger: nil}
+
+	// when
+	option(options)
+
+	// then
+	if options.Logger == nil {
+		t.Error("logger not correctly applied, got nil")
 	}
 }
 

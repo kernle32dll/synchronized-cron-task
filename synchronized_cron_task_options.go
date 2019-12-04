@@ -1,6 +1,7 @@
 package crontask
 
 import (
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -9,6 +10,8 @@ import (
 type TaskOptions struct {
 	Name           string
 	CronExpression string
+
+	Logger *logrus.Logger
 
 	LeadershipTimeout time.Duration
 	LockTimeout       time.Duration
@@ -31,6 +34,14 @@ func TaskName(name string) TaskOption {
 func CronExpression(cronExpression string) TaskOption {
 	return func(c *TaskOptions) {
 		c.CronExpression = cronExpression
+	}
+}
+
+// Logger sets the logger of the synchronized cron task.
+// The default is the logrus global default logger.
+func Logger(logger *logrus.Logger) TaskOption {
+	return func(c *TaskOptions) {
+		c.Logger = logger
 	}
 }
 

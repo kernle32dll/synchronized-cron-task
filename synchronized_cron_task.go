@@ -7,6 +7,7 @@ import (
 
 	"context"
 	"fmt"
+	"io/ioutil"
 	"sync/atomic"
 	"time"
 )
@@ -67,7 +68,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 		cron:   cron.NewWithLocation(time.UTC),
 		locker: redislock.New(client),
 
-		logger: logrus.StandardLogger(),
+		logger: options.Logger,
 
 		electionInProgress: new(int32),
 		shutdownFunc:       leadershipCancel,
@@ -117,6 +118,8 @@ func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, se
 	args := &TaskOptions{
 		Name: "Default Synchronized Task",
 
+		Logger: logrus.StandardLogger(),
+
 		CronExpression:    "0 * * * * *",
 		LeadershipTimeout: 30 * time.Second,
 		LockTimeout:       5 * time.Second,
@@ -125,6 +128,15 @@ func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, se
 
 	for _, setter := range setters {
 		setter(args)
+	}
+
+	if args.Logger == nil {
+		// Create a "noop" logger, so we don't have to check for
+		// the logger being nil
+		logger := logrus.New()
+		logger.Out = ioutil.Discard
+
+		args.Logger = logger
 	}
 
 	return NewSynchronizedCronTaskWithOptions(client, taskFunc, args)
