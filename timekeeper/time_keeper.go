@@ -106,7 +106,8 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 		lastDuration := time.Now().Sub(lastExec)
 
 		if timeKeeper.keepTaskList || timeKeeper.keepLastTask {
-			if _, err := timeKeeper.client.TxPipelined(func(pipeliner redis.Pipeliner) error {
+			ctxClient := timeKeeper.client.WithContext(ctx)
+			if _, err := ctxClient.TxPipelined(func(pipeliner redis.Pipeliner) error {
 				execution := &ExecutionResult{
 					Name:          task.Name(),
 					LastExecution: lastExec,
