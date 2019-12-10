@@ -2,7 +2,7 @@ package crontask
 
 import (
 	"github.com/netology-group/redislock/v7"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
 	"context"
@@ -65,7 +65,10 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 	synchronizedTask := &SynchronizedCronTask{
 		name: options.Name,
 
-		cron:   cron.NewWithLocation(time.UTC),
+		cron: cron.New(
+			cron.WithSeconds(),
+			cron.WithLocation(time.UTC),
+		),
 		locker: redislock.New(client),
 
 		logger: options.Logger,
@@ -74,7 +77,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 		shutdownFunc:       leadershipCancel,
 	}
 
-	if err := synchronizedTask.cron.AddFunc(options.CronExpression, func() {
+	_, err := synchronizedTask.cron.AddFunc(options.CronExpression, func() {
 		if atomic.LoadInt32(synchronizedTask.electionInProgress) == electing {
 			synchronizedTask.logger.Tracef("Skipping election for synchronized task %q, as leadership is already owned", synchronizedTask.name)
 			return
@@ -101,7 +104,8 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 		} else {
 			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.name, time.Since(start))
 		}
-	}); err != nil {
+	})
+	if err != nil {
 		leadershipCancel()
 		return nil, err
 	}

@@ -39,7 +39,7 @@ func (timeKeeper *TimeKeeper) Stop() {
 }
 
 // NewTimeKeeperWithOptions creates a new TimeKeeper instance.
-func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeeper {
+func NewTimeKeeperWithOptions(client *redis.Client, options *Options) (*TimeKeeper, error) {
 	if !options.KeepTaskList && !options.KeepLastTask {
 		logrus.Warn(
 			"Time keeper is configured to neither keep the last task nor a task list. This means, this time keeper is a no-op!",
@@ -61,7 +61,7 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeepe
 
 	if options.CleanUpTask != nil {
 		if options.CleanUpTask.Client != nil {
-			timeKeeper.cleanupTask, _ = crontask.NewSynchronizedCronTask(
+			cleanupTask, err := crontask.NewSynchronizedCronTask(
 				options.CleanUpTask.Client,
 
 				timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
@@ -71,16 +71,21 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *Options) *TimeKeepe
 				crontask.TaskName(options.CleanUpTask.TaskName),
 				crontask.CronExpression("0 * * * * *"),
 			)
+			if err != nil {
+				return nil, err
+			}
+
+			timeKeeper.cleanupTask = cleanupTask
 		} else {
 			logrus.Error("Specified clean up task for time keeper, but provided no redis client - disabling task.")
 		}
 	}
 
-	return timeKeeper
+	return timeKeeper, nil
 }
 
 // NewTimeKeeper creates a new TimeKeeper instance.
-func NewTimeKeeper(client *redis.Client, setters ...Option) *TimeKeeper {
+func NewTimeKeeper(client *redis.Client, setters ...Option) (*TimeKeeper, error) {
 	// Default Options
 	args := &Options{
 		RedisExecListName: "timekeeper.executions.list",

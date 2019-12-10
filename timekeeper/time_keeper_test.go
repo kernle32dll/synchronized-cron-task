@@ -70,7 +70,11 @@ func Test_TimeKeeper(t *testing.T) {
 					}
 				}()
 
-				timeKeeper := NewTimeKeeper(client, CleanUpTask(client, CleanUpTasksTimeOut(0)))
+				timeKeeper, err := NewTimeKeeper(client, CleanUpTask(client, CleanUpTasksTimeOut(0)))
+				if err != nil {
+					t.Fatalf("unexpected error %q", err)
+				}
+
 				defer timeKeeper.Stop()
 
 				testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
@@ -105,7 +109,11 @@ func Test_TimeKeeper(t *testing.T) {
 }
 
 func testTimeKeeperRetrieval(t *testing.T, client *redis.Client) {
-	timeKeeper := NewTimeKeeper(client, CleanUpTask(nil))
+	timeKeeper, err := NewTimeKeeper(client, CleanUpTask(nil))
+	if err != nil {
+		t.Fatalf("unexpected error %q", err)
+	}
+
 	defer timeKeeper.Stop()
 
 	testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
