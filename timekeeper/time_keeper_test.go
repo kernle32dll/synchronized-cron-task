@@ -100,6 +100,10 @@ func Test_TimeKeeper(t *testing.T) {
 				time.Sleep(time.Second)
 
 				count, err = timeKeeper.CountAllRuns(context.Background())
+				if err != nil {
+					t.Fatalf("unexpected error %q", err)
+				}
+
 				if expected := int64(1); count != expected {
 					t.Fatalf("expected count %d, but got %d", expected, count)
 				}

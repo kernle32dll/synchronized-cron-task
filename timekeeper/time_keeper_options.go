@@ -76,7 +76,7 @@ func CleanUpTask(client *redis.Client, setters ...CleanUpOption) Option {
 	}
 }
 
-// Options bundles all available configuration
+// CleanUpOptions bundles all available configuration
 // properties for a time keeper clean up task.
 type CleanUpOptions struct {
 	Client       *redis.Client
@@ -95,7 +95,7 @@ func CleanUpTaskName(taskName string) CleanUpOption {
 	}
 }
 
-// CleanUpTaskName sets the timeout after which tasks are cleaned up.
+// CleanUpTasksTimeOut sets the timeout after which tasks are cleaned up.
 // The default is 30 days.
 func CleanUpTasksTimeOut(tasksTimeOut time.Duration) CleanUpOption {
 	return func(c *CleanUpOptions) {
