@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -62,13 +63,18 @@ type Task interface {
 func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc TaskFunc, options *TaskOptions) (*SynchronizedCronTask, error) {
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
+	cronOptions := []cron.Option{
+		cron.WithLocation(time.UTC),
+	}
+
+	if fields := strings.Fields(options.CronExpression); len(fields) > 5 {
+		cronOptions = append(cronOptions, cron.WithSeconds())
+	}
+
 	synchronizedTask := &SynchronizedCronTask{
 		name: options.Name,
 
-		cron: cron.New(
-			cron.WithSeconds(),
-			cron.WithLocation(time.UTC),
-		),
+		cron:   cron.New(cronOptions...),
 		locker: redislock.New(client),
 
 		logger: options.Logger,
