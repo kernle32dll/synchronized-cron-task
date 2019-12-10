@@ -155,7 +155,7 @@ func stoppedTests(redisVersion string) func(t *testing.T) {
 		}
 
 		// Immediately stop
-		task.Stop()
+		task.Stop(context.Background())
 
 		t.Run("ExecuteNow", func(t *testing.T) {
 			// when

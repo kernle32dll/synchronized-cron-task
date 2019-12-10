@@ -75,7 +75,7 @@ func Test_TimeKeeper(t *testing.T) {
 					t.Fatalf("unexpected error %q", err)
 				}
 
-				defer timeKeeper.Stop()
+				defer timeKeeper.Stop(context.Background())
 
 				testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
 					return nil
@@ -114,7 +114,7 @@ func testTimeKeeperRetrieval(t *testing.T, client *redis.Client) {
 		t.Fatalf("unexpected error %q", err)
 	}
 
-	defer timeKeeper.Stop()
+	defer timeKeeper.Stop(context.Background())
 
 	testFunc := timeKeeper.WrapCronTask(func(ctx context.Context, task crontask.Task) error {
 		return nil

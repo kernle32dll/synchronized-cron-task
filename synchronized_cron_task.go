@@ -40,9 +40,13 @@ func (synchronizedCronTask *SynchronizedCronTask) Name() string {
 }
 
 // Stop gracefully stops the task, while also freeing most of its underlying resources.
-func (synchronizedCronTask *SynchronizedCronTask) Stop() {
+func (synchronizedCronTask *SynchronizedCronTask) Stop(ctx context.Context) {
 	synchronizedCronTask.shutdownFunc()
-	synchronizedCronTask.cron.Stop()
+
+	select {
+	case <-ctx.Done():
+	case <-synchronizedCronTask.cron.Stop().Done():
+	}
 
 	// Allow everything to be properly gc'd
 	synchronizedCronTask.electionInProgress = nil

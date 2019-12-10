@@ -31,9 +31,9 @@ type TimeKeeper struct {
 // Stop gracefully stops the time keeper, while also freeing some of its underlying resources.
 // This has no practical implications, other than inevitably stopping the internal cleanup task,
 // which periodically removes timed out task executions.
-func (timeKeeper *TimeKeeper) Stop() {
+func (timeKeeper *TimeKeeper) Stop(ctx context.Context) {
 	if timeKeeper.cleanupTask != nil {
-		timeKeeper.cleanupTask.Stop()
+		timeKeeper.cleanupTask.Stop(ctx)
 		timeKeeper.cleanupTask = nil
 	}
 }
