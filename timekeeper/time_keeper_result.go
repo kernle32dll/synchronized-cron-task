@@ -38,7 +38,7 @@ type executionResultInternal struct {
 
 // MarshalBinary marshalls the ExecutionResult in JSON.
 func (p ExecutionResult) MarshalBinary() ([]byte, error) {
-	var errorString *string = nil
+	var errorString *string
 
 	if p.Error != nil {
 		errorString = new(string)
