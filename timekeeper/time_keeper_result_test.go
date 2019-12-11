@@ -18,7 +18,7 @@ const exampleJson = "{" +
 	"\"Error\":\"some-error\"" +
 	"}"
 
-// Tests that the RedisPrefix option correctly applies.
+// Tests that the ExecutionResult correctly binary marshalls to json.
 func Test_ExecutionResult_MarshalBinary(t *testing.T) {
 	// given
 	option := &timekeeper.ExecutionResult{
@@ -43,7 +43,7 @@ func Test_ExecutionResult_MarshalBinary(t *testing.T) {
 	}
 }
 
-// Tests that the RedisPrefix option correctly applies.
+// Tests that the ExecutionResult correctly binary unmarshalls from json.
 func Test_ExecutionResult_UnmarshalBinary(t *testing.T) {
 	// given
 	option := &timekeeper.ExecutionResult{}
@@ -68,7 +68,8 @@ func Test_ExecutionResult_UnmarshalBinary(t *testing.T) {
 	}
 }
 
-// Tests that the RedisPrefix option correctly applies.
+// Tests that the ExecutionResult correctly returns errors from binary unmarshall, if
+// the provided json is invalid.
 func Test_ExecutionResult_UnmarshalBinary_error(t *testing.T) {
 	// given
 	option := &timekeeper.ExecutionResult{}
