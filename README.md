@@ -32,7 +32,7 @@ This project consists of two tightly intertwined functionalities. [SynchronizedC
 The former is the heart of the project, providing the mentioned synchronized cron execution. The latter can optionally be used to collect data
 about individual `SynchronizedCronTask` executions, such as run time or errors (if any).
 
-Examples to use [with](./examples/example-with-timekeeper.go) and [without](./examples/example-without-timekeeper.go) time keeper can be
+Examples to use [with](./examples/example-with-timekeeper/main.go) and [without](./examples/example-without-timekeeper/main.go) time keeper can be
 found in the [examples](./examples) directory.
 
 ## Synchronized cron task
