@@ -116,7 +116,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 				synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.name, err)
 			}
 		} else {
-			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.name, time.Since(start))
+			synchronizedTask.logger.Infof("Successfully executed synchronized task %q in %s", synchronizedTask.name, time.Since(start))
 		}
 	})
 	if err != nil {

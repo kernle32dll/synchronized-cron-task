@@ -88,7 +88,7 @@ func basicExecutionTest(redisVersion string) func(t *testing.T) {
 
 			"Trying to temporarily gain leadership for synchronized task",
 			"Resigning temporary leadership for synchronized task",
-			"Successfully filled executed task",
+			"Successfully executed synchronized task",
 		)
 	}
 }
@@ -129,7 +129,7 @@ func concurrentExecutionTest(redisVersion string) func(t *testing.T) {
 			t, hook,
 
 			"leadership is already owned",
-			"Successfully filled executed task",
+			"Successfully executed synchronized task",
 		)
 	}
 }
