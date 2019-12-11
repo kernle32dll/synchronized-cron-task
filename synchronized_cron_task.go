@@ -109,8 +109,12 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 			options.LockTimeout,
 			options.LockHeartbeat,
 			taskFunc,
-		); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
-			synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.name, err)
+		); err != nil {
+			if err == redislock.ErrNotObtained {
+				synchronizedTask.logger.Debugf("Could not gain temporary leadership for synchronized task %q - ignoring", synchronizedTask.name)
+			} else if err != context.Canceled && err != context.DeadlineExceeded {
+				synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.name, err)
+			}
 		} else {
 			synchronizedTask.logger.Infof("Successfully filled executed task %q in %s", synchronizedTask.name, time.Since(start))
 		}
