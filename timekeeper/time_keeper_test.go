@@ -8,6 +8,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -248,13 +249,68 @@ func testCleanup(version string) func(t *testing.T) {
 	}
 }
 
+func Test_RedisErrors(t *testing.T) {
+	// create client, but immediately close
+	client := redis.NewClient(&redis.Options{
+		Network: "tcp",
+		Addr:    "does-not-exist:6379",
+	})
+	closeClient(t, client, nil)
+
+	timeKeeper, err := NewTimeKeeper(client, CleanUpTask(nil))
+	if err != nil {
+		t.Fatalf("unexpected error %q", err)
+	}
+
+	defer timeKeeper.Stop(context.Background())
+
+	t.Run("CountAllRuns", testForError(func(ctx context.Context) error {
+		_, err = timeKeeper.CountAllRuns(ctx)
+		return err
+	}))
+
+	t.Run("CountTasks", testForError(func(ctx context.Context) error {
+		_, err = timeKeeper.CountTasks(ctx)
+		return err
+	}))
+
+	t.Run("GetAllRuns", testForError(func(ctx context.Context) error {
+		_, err = timeKeeper.GetAllRuns(ctx, 0, 10)
+		return err
+	}))
+
+	t.Run("GetLastRunOfAllTasks", testForError(func(ctx context.Context) error {
+		_, err = timeKeeper.GetLastRunOfAllTasks(ctx)
+		return err
+	}))
+
+	t.Run("GetLastRunOfTask", testForError(func(ctx context.Context) error {
+		_, err = timeKeeper.GetLastRunOfTask(ctx, "some-task")
+		return err
+	}))
+}
+
+func testForError(testFunc func(ctx context.Context) error) func(t *testing.T) {
+	expectedErr := errors.New("redis: client is closed")
+
+	return func(t *testing.T) {
+		t.Parallel()
+		err := testFunc(context.Background())
+		if err == nil || err.Error() != expectedErr.Error() {
+			t.Errorf("expected %q, got %q", expectedErr, err)
+		}
+	}
+}
+
 func closeClient(t *testing.T, client *redis.Client, closer func(context.Context) error) {
 	if err := client.Close(); err != nil {
 		t.Logf("unexpected error shutting down redis client: %s", err)
 	}
 
-	if err := closer(context.Background()); err != nil {
-		t.Logf("unexpected error shutting down redis container: %s", err)
+	if closer != nil {
+		if err := closer(context.Background()); err != nil {
+			t.Logf("unexpected error shutting down redis container: %s", err)
+		}
 	}
 }
 
