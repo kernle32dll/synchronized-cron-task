@@ -216,7 +216,7 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	lockHeartbeat time.Duration,
 	taskFunc TaskFunc,
 ) error {
-	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.name)
+	logger := synchronizedCronTask.logger.WithContext(ctx).WithField("task_name", synchronizedCronTask.name)
 
 	// Try to lock
 	logger.Tracef("Trying to temporarily gain leadership for synchronized task %q", synchronizedCronTask.name)
@@ -259,7 +259,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 	doneChannel chan error, ticker *time.Ticker,
 	lock *redislock.Lock, lockTimeout time.Duration,
 ) error {
-	logger := synchronizedCronTask.logger.WithField("task_name", synchronizedCronTask.name)
+	logger := synchronizedCronTask.logger.WithContext(ctx).WithField("task_name", synchronizedCronTask.name)
 
 	for {
 		select {
