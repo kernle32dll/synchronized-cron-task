@@ -70,14 +70,15 @@ type logrusCronLoggerBridge struct {
 func (l logrusCronLoggerBridge) Info(msg string, keysAndValues ...interface{}) {
 	l.logger.
 		WithFields(l.translateKeysAndValues(keysAndValues)).
-		Debug(msg) // intentionally debug, since cron output is hardly of interest, if not debugging
+		// intentionally trace, since cron output is hardly of interest, if not low level debugging
+		Trace(fmt.Sprintf("cron: %s", msg))
 }
 
 func (l logrusCronLoggerBridge) Error(err error, msg string, keysAndValues ...interface{}) {
 	l.logger.
 		WithFields(l.translateKeysAndValues(keysAndValues)).
 		WithError(err).
-		Error(msg)
+		Error(fmt.Sprintf("cron: %s", msg))
 }
 
 func (l logrusCronLoggerBridge) translateKeysAndValues(keysAndValues []interface{}) logrus.Fields {
