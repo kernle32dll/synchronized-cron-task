@@ -294,7 +294,6 @@ func testForError(testFunc func(ctx context.Context) error) func(t *testing.T) {
 	expectedErr := errors.New("redis: client is closed")
 
 	return func(t *testing.T) {
-		t.Parallel()
 		err := testFunc(context.Background())
 		if err == nil || err.Error() != expectedErr.Error() {
 			t.Errorf("expected %q, got %q", expectedErr, err)
