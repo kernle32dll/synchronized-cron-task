@@ -62,6 +62,33 @@ type Task interface {
 	NextTime() time.Time
 }
 
+// logrusCronLoggerBridge bridges logrus to work with robfig/cron.
+type logrusCronLoggerBridge struct {
+	logger *logrus.Logger
+}
+
+func (l logrusCronLoggerBridge) Info(msg string, keysAndValues ...interface{}) {
+	l.logger.
+		WithFields(l.translateKeysAndValues(keysAndValues)).
+		Debug(msg) // intentionally debug, since cron output is hardly of interest, if not debugging
+}
+
+func (l logrusCronLoggerBridge) Error(err error, msg string, keysAndValues ...interface{}) {
+	l.logger.
+		WithFields(l.translateKeysAndValues(keysAndValues)).
+		WithError(err).
+		Error(msg)
+}
+
+func (l logrusCronLoggerBridge) translateKeysAndValues(keysAndValues []interface{}) logrus.Fields {
+	fields := make(logrus.Fields, len(keysAndValues)/2)
+	for i := 0; i < len(keysAndValues); i += 2 {
+		fields[keysAndValues[i].(string)] = keysAndValues[i+1]
+	}
+
+	return fields
+}
+
 // NewSynchronizedCronTaskWithOptions creates a new SynchronizedCronTask instance, or errors out
 // if the provided cron expression was invalid.
 func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc TaskFunc, options *TaskOptions) (*SynchronizedCronTask, error) {
@@ -78,6 +105,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 
 	cronOptions := []cron.Option{
 		cron.WithLocation(time.UTC),
+		cron.WithLogger(logrusCronLoggerBridge{options.Logger}),
 	}
 
 	if fields := strings.Fields(options.CronExpression); len(fields) > 5 {
