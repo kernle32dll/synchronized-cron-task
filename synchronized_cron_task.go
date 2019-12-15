@@ -65,6 +65,15 @@ type Task interface {
 // NewSynchronizedCronTaskWithOptions creates a new SynchronizedCronTask instance, or errors out
 // if the provided cron expression was invalid.
 func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc TaskFunc, options *TaskOptions) (*SynchronizedCronTask, error) {
+	if options.Logger == nil {
+		// Create a "noop" logger, so we don't have to check for
+		// the logger being nil
+		logger := logrus.New()
+		logger.Out = ioutil.Discard
+
+		options.Logger = logger
+	}
+
 	shutdownCtx, leadershipCancel := context.WithCancel(context.Background())
 
 	cronOptions := []cron.Option{
@@ -146,15 +155,6 @@ func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, se
 
 	for _, setter := range setters {
 		setter(args)
-	}
-
-	if args.Logger == nil {
-		// Create a "noop" logger, so we don't have to check for
-		// the logger being nil
-		logger := logrus.New()
-		logger.Out = ioutil.Discard
-
-		args.Logger = logger
 	}
 
 	return NewSynchronizedCronTaskWithOptions(client, taskFunc, args)
