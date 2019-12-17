@@ -83,6 +83,11 @@ func basicExecutionTest(redisVersion string) func(t *testing.T) {
 			t.Fatalf("expected name %q as default cron task , but got %q", expected, task.Name())
 		}
 
+		marshalResult, err := task.MarshalJSON()
+		if res := string(marshalResult); !strings.Contains(res, "Default Synchronized Task") {
+			t.Errorf("unexpected marshalling result, %q did not contain task name", res)
+		}
+
 		logContains(
 			t, hook,
 

@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -32,6 +33,16 @@ type SynchronizedCronTask struct {
 
 	electionInProgress *int32
 	shutdownFunc       func()
+}
+
+func (synchronizedCronTask SynchronizedCronTask) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Name     string    `json:"name"`
+		NextTime time.Time `json:"nextTime"`
+	}{
+		Name:     synchronizedCronTask.Name(),
+		NextTime: synchronizedCronTask.NextTime(),
+	})
 }
 
 // Name returns the name of the task.
