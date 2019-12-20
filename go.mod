@@ -10,5 +10,5 @@ require (
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/testcontainers/testcontainers-go v0.0.9
-	golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9 // indirect
+	golang.org/x/sys v0.0.0-20191220142924-d4481acd189f // indirect
 )
