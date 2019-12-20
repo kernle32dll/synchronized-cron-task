@@ -1,6 +1,6 @@
 module github.com/kernle32dll/synchronized-cron-task
 
-go 1.13
+go 1.12
 
 require (
 	github.com/Microsoft/hcsshim v0.8.6 // indirect
