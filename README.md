@@ -10,9 +10,6 @@ synchronized-cron-task is a lightweight wrapper around [github.com/robfig/cron](
 What this means ist that synchronized-cron-task provides a guarantee that with any number of running instances of an application, the given cron task
 is only ever executed on one instance at a time.
 
-**Note: This project builds on top of the pending version 7.X of [github.com/go-redis/redis](https://github.com/go-redis/redis). This was
-chosen for the sole reason to make synchronized-cron-task work effortlessly in tandem with [github.com/kernle32dll/planlagt](https://github.com/kernle32dll/planlagt)**
-
 **Note: Unlike most my projects, this project is licenced under the [Apache License 2.0](./LICENSE)!**
 
 **-WARNING-: This is not production tested, and api-breaking may occur while no 1.0 release has been tagged**
