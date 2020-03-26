@@ -1,7 +1,7 @@
 package crontask
 
 import (
-	"github.com/netology-group/redislock/v7"
+	"github.com/bsm/redislock"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
