@@ -4,7 +4,7 @@ import (
 	crontask "github.com/kernle32dll/synchronized-cron-task"
 	"github.com/kernle32dll/synchronized-cron-task/timekeeper"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 
 	"context"

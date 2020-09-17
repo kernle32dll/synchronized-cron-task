@@ -3,7 +3,7 @@ package timekeeper
 import (
 	"github.com/kernle32dll/synchronized-cron-task"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 
 	"context"
@@ -115,8 +115,7 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 		lastDuration := time.Now().Sub(lastExec)
 
 		if timeKeeper.keepTaskList || timeKeeper.keepLastTask {
-			ctxClient := timeKeeper.client.WithContext(ctx)
-			if _, err := ctxClient.TxPipelined(func(pipeliner redis.Pipeliner) error {
+			if _, err := timeKeeper.client.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
 				execution := &ExecutionResult{
 					Name:          task.Name(),
 					LastExecution: lastExec,
@@ -126,11 +125,11 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 				}
 
 				if timeKeeper.keepLastTask {
-					pipeliner.HSet(timeKeeper.redisLastExecName, task.Name(), execution)
+					pipeliner.HSet(ctx, timeKeeper.redisLastExecName, task.Name(), execution)
 				}
 
 				if timeKeeper.keepTaskList {
-					pipeliner.LPush(timeKeeper.redisExecListName, execution)
+					pipeliner.LPush(ctx, timeKeeper.redisExecListName, execution)
 				}
 
 				return nil
@@ -150,10 +149,9 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 
 func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context, client *redis.Client, taskListTimeOut time.Duration) error {
 	timeOutPoint := time.Now().Add(-taskListTimeOut)
-	ctxClient := client.WithContext(ctx)
 
 	for {
-		lastElemList, err := ctxClient.LRange(timeKeeper.redisExecListName, -1, -1).Result()
+		lastElemList, err := client.LRange(ctx, timeKeeper.redisExecListName, -1, -1).Result()
 		if err != nil {
 			return nil
 		}
@@ -173,7 +171,7 @@ func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context, client *re
 		if execResult.LastExecution.Before(timeOutPoint) {
 			// Note, its always safe to rpop, as we only lpush, and thus never
 			// interfere with the end of the list
-			if err := ctxClient.RPop(timeKeeper.redisExecListName).Err(); err != nil {
+			if err := client.RPop(ctx, timeKeeper.redisExecListName).Err(); err != nil {
 				return err
 			}
 
@@ -189,9 +187,7 @@ func (timeKeeper *TimeKeeper) cleanUpOldTaskRuns(ctx context.Context, client *re
 // GetAllRuns returns all tasks executions recorded by the time keeper, and not yet cleaned up.
 // Possible errors are related to redis connection problems.
 func (timeKeeper *TimeKeeper) GetAllRuns(ctx context.Context, offset, limit int64) ([]ExecutionResult, error) {
-	client := timeKeeper.client.WithContext(ctx)
-
-	results, err := client.LRange(timeKeeper.redisExecListName, offset, offset+limit-1).Result()
+	results, err := timeKeeper.client.LRange(ctx, timeKeeper.redisExecListName, offset, offset+limit-1).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +198,7 @@ func (timeKeeper *TimeKeeper) GetAllRuns(ctx context.Context, offset, limit int6
 // CountAllRuns returns the total amount of task executions recorded by the time keeper, and
 // not yet cleaned up. Possible errors are related to redis connection problems.
 func (timeKeeper *TimeKeeper) CountAllRuns(ctx context.Context) (int64, error) {
-	client := timeKeeper.client.WithContext(ctx)
-
-	count, err := client.LLen(timeKeeper.redisExecListName).Result()
+	count, err := timeKeeper.client.LLen(ctx, timeKeeper.redisExecListName).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -216,9 +210,7 @@ func (timeKeeper *TimeKeeper) CountAllRuns(ctx context.Context) (int64, error) {
 // This implies that tasks which have not yet run are not returned. Possible errors are related to
 //redis connection problems.
 func (timeKeeper *TimeKeeper) GetLastRunOfAllTasks(ctx context.Context) ([]ExecutionResult, error) {
-	client := timeKeeper.client.WithContext(ctx)
-
-	resultsMap, err := client.HGetAll(timeKeeper.redisLastExecName).Result()
+	resultsMap, err := timeKeeper.client.HGetAll(ctx, timeKeeper.redisLastExecName).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -245,9 +237,7 @@ func (timeKeeper *TimeKeeper) GetLastRunOfAllTasks(ctx context.Context) ([]Execu
 // This implies that tasks which have not yet run are not counted in. Possible errors
 // are related to redis connection problems.
 func (timeKeeper *TimeKeeper) CountTasks(ctx context.Context) (int64, error) {
-	client := timeKeeper.client.WithContext(ctx)
-
-	count, err := client.HLen(timeKeeper.redisLastExecName).Result()
+	count, err := timeKeeper.client.HLen(ctx, timeKeeper.redisLastExecName).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -259,9 +249,7 @@ func (timeKeeper *TimeKeeper) CountTasks(ctx context.Context) (int64, error) {
 // If the task has not been run yet, an error is returned. Possible errors are
 // related to redis connection problems.
 func (timeKeeper *TimeKeeper) GetLastRunOfTask(ctx context.Context, name string) (ExecutionResult, error) {
-	client := timeKeeper.client.WithContext(ctx)
-
-	result, err := client.HGet(timeKeeper.redisLastExecName, name).Result()
+	result, err := timeKeeper.client.HGet(ctx, timeKeeper.redisLastExecName, name).Result()
 	if err != nil {
 		return ExecutionResult{}, err
 	}

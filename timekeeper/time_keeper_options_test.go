@@ -1,7 +1,7 @@
 package timekeeper
 
 import (
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"testing"
 	"time"
 )

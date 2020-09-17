@@ -3,7 +3,7 @@ package crontask_test
 import (
 	crontask "github.com/kernle32dll/synchronized-cron-task"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/testcontainers/testcontainers-go"
