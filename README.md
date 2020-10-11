@@ -12,7 +12,7 @@ is only ever executed on one instance at a time.
 
 **Note: Unlike most my projects, this project is licenced under the [Apache License 2.0](./LICENSE)!**
 
-**-WARNING-: This is not production tested, and api-breaking may occur while no 1.0 release has been tagged**
+**-WARNING-: Api-breaking may occur while no 1.0 release has been tagged**
 
 Download:
 
@@ -21,6 +21,10 @@ go get github.com/kernle32dll/synchronized-cron-task
 ```
 
 Detailed documentation can be found on [GoDoc](https://godoc.org/github.com/kernle32dll/synchronized-cron-task).
+
+## Compatibility
+
+synchronized-cron-task is tested against the latest versions of Redis 4, 5 and 6.
 
 ## Getting started
 
