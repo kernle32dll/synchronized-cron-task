@@ -33,6 +33,7 @@ func Test_TimeKeeper(t *testing.T) {
 	redisVersions := []string{
 		"4-alpine",
 		"5-alpine",
+		"6-alpine",
 	}
 	for i := range redisVersions {
 		version := redisVersions[i]
