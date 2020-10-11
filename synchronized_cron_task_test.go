@@ -30,6 +30,8 @@ func (executionTracker *ExecutionTracker) getFunc() crontask.TaskFunc {
 }
 
 func Test_SynchronizedCronTask(t *testing.T) {
+	t.Run("malformed-cron-expression", malformedCronExpressionTest)
+
 	redisVersions := []string{
 		"4-alpine",
 		"5-alpine",
@@ -48,6 +50,8 @@ func Test_SynchronizedCronTask(t *testing.T) {
 			t.Run("stopped-execution-test", stoppedTests(version))
 
 			t.Run("error-in-execution-test", errorTest(version))
+
+			t.Run("secondless-cron-expression", secondlessCronExpression(version))
 		})
 	}
 }
@@ -65,7 +69,7 @@ func basicExecutionTest(redisVersion string) func(t *testing.T) {
 		task, err := crontask.NewSynchronizedCronTask(
 			client,
 			executionTracker.getFunc(),
-			crontask.CronExpression("0 0 1 1 *"),
+			crontask.CronExpression("0 0 0 1 1 *"),
 			crontask.Logger(logger),
 		)
 		if err != nil {
@@ -115,7 +119,7 @@ func concurrentExecutionTest(redisVersion string) func(t *testing.T) {
 				time.Sleep(time.Second)
 				return executionTracker.getFunc()(ctx, task)
 			},
-			crontask.CronExpression("0 0 1 1 *"),
+			crontask.CronExpression("0 0 0 1 1 *"),
 			crontask.Logger(logger),
 		)
 		if err != nil {
@@ -153,7 +157,7 @@ func stoppedTests(redisVersion string) func(t *testing.T) {
 		task, err := crontask.NewSynchronizedCronTask(
 			client,
 			executionTracker.getFunc(),
-			crontask.CronExpression("0 0 1 1 *"),
+			crontask.CronExpression("0 0 0 1 1 *"),
 			crontask.Logger(logger),
 		)
 		if err != nil {
@@ -208,7 +212,7 @@ func errorTest(redisVersion string) func(t *testing.T) {
 		task, err := crontask.NewSynchronizedCronTask(
 			client,
 			executionTracker.getFunc(),
-			crontask.CronExpression("0 0 1 1 *"),
+			crontask.CronExpression("0 0 0 1 1 *"),
 			crontask.Logger(logger),
 		)
 		if err != nil {
@@ -228,6 +232,51 @@ func errorTest(redisVersion string) func(t *testing.T) {
 
 			"error while executing synchronized task function \"Default Synchronized Task\": some error",
 		)
+	}
+}
+
+func secondlessCronExpression(redisVersion string) func(t *testing.T) {
+	return func(t *testing.T) {
+		// given
+		client, closer := getRedisClient(t, redisVersion)
+		defer closeClient(t, client, closer)
+
+		executionTracker := &ExecutionTracker{}
+		executionTracker.retErr = errors.New("some error")
+
+		// when
+		task, err := crontask.NewSynchronizedCronTask(
+			client,
+			func(context.Context, crontask.Task) error { return nil },
+			crontask.CronExpression("0 0 1 1 *"),
+		)
+
+		// then
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		if task == nil {
+			t.Error("Expected a task being returned, but none was")
+		}
+	}
+}
+
+func malformedCronExpressionTest(t *testing.T) {
+	// when
+	task, err := crontask.NewSynchronizedCronTask(
+		nil, // We know the client is never used, thus we can use nil here safely
+		func(context.Context, crontask.Task) error { return nil },
+		crontask.CronExpression("aint-work"),
+	)
+
+	// then
+	if err == nil {
+		t.Error("Expected error, but none occurred")
+	}
+
+	if task != nil {
+		t.Error("Expected no task being returned, but was")
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -118,10 +117,9 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 	cronOptions := []cron.Option{
 		cron.WithLocation(time.UTC),
 		cron.WithLogger(logrusCronLoggerBridge{options.Logger}),
-	}
-
-	if fields := strings.Fields(options.CronExpression); len(fields) > 5 {
-		cronOptions = append(cronOptions, cron.WithSeconds())
+		cron.WithParser(cron.NewParser(
+			cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
+		)),
 	}
 
 	synchronizedTask := &SynchronizedCronTask{
