@@ -18,6 +18,28 @@ const (
 	notElecting = int32(0)
 )
 
+const (
+	// DefaultName is the default name of a synchronized cron task.
+	DefaultName = "Default Synchronized Task"
+
+	// DefaultCronExpression is the default cron expression of a
+	// synchronized cron task. 0 * * * * * means every minute.
+	DefaultCronExpression = "0 * * * * *"
+
+	// DefaultLeadershipTimeout is the default timeout of a single
+	// execution of a synchronized cron task.
+	DefaultLeadershipTimeout = 30 * time.Second
+
+	// DefaultLockTimeout is the default timeout for the lock of a
+	// single execution of a synchronized cron task.
+	DefaultLockTimeout = 5 * time.Second
+
+	// DefaultLockHeartbeat is the default interval, in which an
+	// acquired lock should be renewed (to the total of the leadership
+	// timeout).
+	DefaultLockHeartbeat = 1 * time.Second
+)
+
 // SynchronizedCronTask describes a task, which is identified by a cron expression and a
 // redis client it uses to synchronize execution across running instances.
 //
@@ -181,14 +203,14 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 func NewSynchronizedCronTask(client redislock.RedisClient, taskFunc TaskFunc, setters ...TaskOption) (*SynchronizedCronTask, error) {
 	// Default Options
 	args := &TaskOptions{
-		Name: "Default Synchronized Task",
+		Name: DefaultName,
 
 		Logger: logrus.StandardLogger(),
 
-		CronExpression:    "0 * * * * *",
-		LeadershipTimeout: 30 * time.Second,
-		LockTimeout:       5 * time.Second,
-		LockHeartbeat:     1 * time.Second,
+		CronExpression:    DefaultCronExpression,
+		LeadershipTimeout: DefaultLeadershipTimeout,
+		LockTimeout:       DefaultLockTimeout,
+		LockHeartbeat:     DefaultLockHeartbeat,
 	}
 
 	for _, setter := range setters {
