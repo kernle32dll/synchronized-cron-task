@@ -7,6 +7,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"sync/atomic"
@@ -179,9 +180,11 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 			options.LockHeartbeat,
 			taskFunc,
 		); err != nil {
-			if err == redislock.ErrNotObtained {
+			if errors.Is(err, redislock.ErrNotObtained) {
 				synchronizedTask.logger.Debugf("Could not gain temporary leadership for synchronized task %q - ignoring", synchronizedTask.name)
-			} else if err != context.Canceled && err != context.DeadlineExceeded {
+			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				synchronizedTask.logger.Errorf("Forcefully giving up leadership for synchronized task %q - timeout of %s reached", synchronizedTask.name, options.LeadershipTimeout)
+			} else {
 				synchronizedTask.logger.Errorf("Error while trying to temporarily gain leadership for synchronized task %q: %s", synchronizedTask.name, err)
 			}
 		} else {
