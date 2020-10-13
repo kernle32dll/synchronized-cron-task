@@ -92,6 +92,9 @@ func basicExecutionTest(redisVersion string) func(t *testing.T) {
 		if res := string(marshalResult); !strings.Contains(res, "Default Synchronized Task") {
 			t.Errorf("unexpected marshalling result, %q did not contain task name", res)
 		}
+		if err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
 
 		logContains(
 			t, hook,

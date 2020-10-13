@@ -122,7 +122,7 @@ func (timeKeeper *TimeKeeper) WrapCronTask(taskFunc crontask.TaskFunc) crontask.
 	return func(ctx context.Context, task crontask.Task) error {
 		lastExec := time.Now()
 		taskErr := taskFunc(ctx, task)
-		lastDuration := time.Now().Sub(lastExec)
+		lastDuration := time.Since(lastExec)
 
 		if timeKeeper.keepTaskList || timeKeeper.keepLastTask {
 			if _, err := timeKeeper.client.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
