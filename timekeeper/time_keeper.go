@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+const (
+	// DefaultRedisExecListName is the default redis key for the list used
+	// to track all executions of tasks managed by the time keeper.
+	DefaultRedisExecListName = "timekeeper.executions.list"
+
+	// DefaultRedisLastExecName is the default redis key for the set used
+	// to track the latest execution of tasks managed by the time keeper.
+	DefaultRedisLastExecName = "timekeeper.executions.aggregation"
+)
+
 // TimeKeeper is a wrapper creator, used to track data about executed
 // SynchronizedCronTasks in Redis.
 //
@@ -88,8 +98,8 @@ func NewTimeKeeperWithOptions(client *redis.Client, options *Options) (*TimeKeep
 func NewTimeKeeper(client *redis.Client, setters ...Option) (*TimeKeeper, error) {
 	// Default Options
 	args := &Options{
-		RedisExecListName: "timekeeper.executions.list",
-		RedisLastExecName: "timekeeper.executions.aggregation",
+		RedisExecListName: DefaultRedisExecListName,
+		RedisLastExecName: DefaultRedisLastExecName,
 
 		KeepTaskList: true,
 		KeepLastTask: true,

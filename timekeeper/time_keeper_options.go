@@ -22,7 +22,7 @@ type Option func(*Options)
 
 // RedisExecListName sets redis key for the list used to track
 // all executions of tasks managed by the time keeper.
-// The default is "timekeeper.executions.list".
+// The default is timekeeper.DefaultRedisExecListName.
 func RedisExecListName(redisExecListName string) Option {
 	return func(c *Options) {
 		c.RedisExecListName = redisExecListName
@@ -31,7 +31,7 @@ func RedisExecListName(redisExecListName string) Option {
 
 // RedisLastExecName sets redis key for the set used to track
 // the latest execution of tasks managed by the time keeper.
-// The default is "timekeeper.executions.aggregation".
+// The default is timekeeper.DefaultRedisLastExecName.
 func RedisLastExecName(redisLastExecName string) Option {
 	return func(c *Options) {
 		c.RedisLastExecName = redisLastExecName
