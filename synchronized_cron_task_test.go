@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -115,11 +116,15 @@ func concurrentExecutionTest(redisVersion string) func(t *testing.T) {
 		logger, hook := test.NewNullLogger()
 		logger.Level = logrus.TraceLevel
 
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+
 		executionTracker := &ExecutionTracker{}
 		task, err := crontask.NewSynchronizedCronTask(
 			client,
 			func(ctx context.Context, task crontask.Task) error {
-				time.Sleep(time.Second)
+				time.Sleep(100 * time.Millisecond)
+				defer wg.Done()
 				return executionTracker.getFunc()(ctx, task)
 			},
 			crontask.CronExpression("0 0 0 1 1 *"),
@@ -132,6 +137,10 @@ func concurrentExecutionTest(redisVersion string) func(t *testing.T) {
 		// when
 		go task.ExecuteNow()
 		task.ExecuteNow()
+
+		// Wait for the async task to successfully finish
+		wg.Wait()
+		time.Sleep(100 * time.Millisecond)
 
 		// then
 		if executionTracker.count != 1 {
