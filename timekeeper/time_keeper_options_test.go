@@ -1,7 +1,10 @@
-package timekeeper
+package timekeeper_test
 
 import (
+	"github.com/kernle32dll/synchronized-cron-task/timekeeper"
+
 	"github.com/go-redis/redis/v8"
+
 	"testing"
 	"time"
 )
@@ -9,8 +12,8 @@ import (
 // Tests that the RedisExecListName option correctly applies.
 func Test_TimeKeeperOption_RedisExecListName(t *testing.T) {
 	// given
-	option := RedisExecListName("bar")
-	options := &Options{RedisExecListName: "foo"}
+	option := timekeeper.RedisExecListName("bar")
+	options := &timekeeper.Options{RedisExecListName: "foo"}
 
 	// when
 	option(options)
@@ -24,8 +27,8 @@ func Test_TimeKeeperOption_RedisExecListName(t *testing.T) {
 // Tests that the RedisLastExecName option correctly applies.
 func Test_TimeKeeperOption_RedisLastExecName(t *testing.T) {
 	// given
-	option := RedisLastExecName("bar")
-	options := &Options{RedisLastExecName: "foo"}
+	option := timekeeper.RedisLastExecName("bar")
+	options := &timekeeper.Options{RedisLastExecName: "foo"}
 
 	// when
 	option(options)
@@ -39,8 +42,8 @@ func Test_TimeKeeperOption_RedisLastExecName(t *testing.T) {
 // Tests that the KeepTaskList option correctly applies.
 func Test_TimeKeeperOption_KeepTaskList(t *testing.T) {
 	// given
-	option := KeepTaskList(true)
-	options := &Options{KeepTaskList: false}
+	option := timekeeper.KeepTaskList(true)
+	options := &timekeeper.Options{KeepTaskList: false}
 
 	// when
 	option(options)
@@ -54,8 +57,8 @@ func Test_TimeKeeperOption_KeepTaskList(t *testing.T) {
 // Tests that the KeepLastTask option correctly applies.
 func Test_TimeKeeperOption_KeepLastTask(t *testing.T) {
 	// given
-	option := KeepLastTask(true)
-	options := &Options{KeepLastTask: false}
+	option := timekeeper.KeepLastTask(true)
+	options := &timekeeper.Options{KeepLastTask: false}
 
 	// when
 	option(options)
@@ -71,8 +74,8 @@ func Test_TimeKeeperOption_CleanUpTask(t *testing.T) {
 	t.Run("Enable", func(t *testing.T) {
 		// given
 		someClient := &redis.Client{}
-		option := CleanUpTask(someClient, CleanUpTaskName("test"), CleanUpTasksTimeOut(time.Hour))
-		options := &Options{CleanUpTask: nil}
+		option := timekeeper.CleanUpTask(someClient, timekeeper.CleanUpTaskName("test"), timekeeper.CleanUpTasksTimeOut(time.Hour))
+		options := &timekeeper.Options{CleanUpTask: nil}
 
 		// when
 		option(options)
@@ -95,8 +98,8 @@ func Test_TimeKeeperOption_CleanUpTask(t *testing.T) {
 
 	t.Run("Disable", func(t *testing.T) {
 		// given
-		option := CleanUpTask(nil)
-		options := &Options{CleanUpTask: &CleanUpOptions{Client: &redis.Client{}}}
+		option := timekeeper.CleanUpTask(nil)
+		options := &timekeeper.Options{CleanUpTask: &timekeeper.CleanUpOptions{Client: &redis.Client{}}}
 
 		// when
 		option(options)
