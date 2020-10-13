@@ -276,7 +276,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 			return ctx.Err()
 		case err := <-doneChannel:
 			if err != nil {
-				return fmt.Errorf(cronErrorFormat, synchronizedCronTask.name, err)
+				return fmt.Errorf("error while executing synchronized task function %q: %w", synchronizedCronTask.name, err)
 			}
 
 			return nil
@@ -286,7 +286,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 				Context: ctx,
 			}); err != nil {
 				return fmt.Errorf(
-					renewalErrorFormat,
+					"failed to renew leadership for synchronized task %q lock while executing: %w - crudely canceling",
 					synchronizedCronTask.name, err,
 				)
 			}
