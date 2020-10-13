@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// ExecutionResult describes a single recorded run of a task
+// ExecutionResult describes a single recorded run of a task.
 type ExecutionResult struct {
 	Name string
 
