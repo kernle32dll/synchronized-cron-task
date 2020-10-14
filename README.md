@@ -24,7 +24,10 @@ Detailed documentation can be found on [GoDoc](https://godoc.org/github.com/kern
 
 ## Compatibility
 
-synchronized-cron-task is tested against the latest versions of Redis 4, 5 and 6.
+synchronized-cron-task is automatically tested against the following:
+ 
+- Go 1.13.X, 1.14.X and 1.15.X
+- Redis 4.X, 5.X and 6.X.
 
 ## Getting started
 
