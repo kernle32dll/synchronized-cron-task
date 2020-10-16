@@ -12,8 +12,6 @@ is only ever executed on one instance at a time.
 
 **Note: Unlike most my projects, this project is licenced under the [Apache License 2.0](./LICENSE)!**
 
-**-WARNING-: Api-breaking may occur while no 1.0 release has been tagged**
-
 Download:
 
 ```
