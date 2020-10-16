@@ -1,7 +1,10 @@
-package crontask
+package crontask_test
 
 import (
+	crontask "github.com/kernle32dll/synchronized-cron-task"
+
 	"github.com/sirupsen/logrus"
+
 	"testing"
 	"time"
 )
@@ -9,8 +12,8 @@ import (
 // Tests that the TaskName option correctly applies.
 func Test_TaskOption_TaskName(t *testing.T) {
 	// given
-	option := TaskName("bar")
-	options := &TaskOptions{Name: "foo"}
+	option := crontask.TaskName("bar")
+	options := &crontask.TaskOptions{Name: "foo"}
 
 	// when
 	option(options)
@@ -24,8 +27,8 @@ func Test_TaskOption_TaskName(t *testing.T) {
 // Tests that the CronExpression option correctly applies.
 func Test_TaskOption_CronExpression(t *testing.T) {
 	// given
-	option := CronExpression("bar")
-	options := &TaskOptions{CronExpression: "foo"}
+	option := crontask.CronExpression("bar")
+	options := &crontask.TaskOptions{CronExpression: "foo"}
 
 	// when
 	option(options)
@@ -39,8 +42,8 @@ func Test_TaskOption_CronExpression(t *testing.T) {
 // Tests that the Logger option correctly applies.
 func Test_TaskOption_Logger(t *testing.T) {
 	// given
-	option := Logger(&logrus.Logger{})
-	options := &TaskOptions{Logger: nil}
+	option := crontask.Logger(&logrus.Logger{})
+	options := &crontask.TaskOptions{Logger: nil}
 
 	// when
 	option(options)
@@ -54,8 +57,8 @@ func Test_TaskOption_Logger(t *testing.T) {
 // Tests that the LeadershipTimeout option correctly applies.
 func Test_TaskOption_LeadershipTimeout(t *testing.T) {
 	// given
-	option := LeadershipTimeout(time.Second)
-	options := &TaskOptions{LeadershipTimeout: time.Hour}
+	option := crontask.LeadershipTimeout(time.Second)
+	options := &crontask.TaskOptions{LeadershipTimeout: time.Hour}
 
 	// when
 	option(options)
@@ -69,8 +72,8 @@ func Test_TaskOption_LeadershipTimeout(t *testing.T) {
 // Tests that the LockTimeout option correctly applies.
 func Test_TaskOption_LockTimeout(t *testing.T) {
 	// given
-	option := LockTimeout(time.Second)
-	options := &TaskOptions{LockTimeout: time.Hour}
+	option := crontask.LockTimeout(time.Second)
+	options := &crontask.TaskOptions{LockTimeout: time.Hour}
 
 	// when
 	option(options)
@@ -84,8 +87,8 @@ func Test_TaskOption_LockTimeout(t *testing.T) {
 // Tests that the LockHeartbeat option correctly applies.
 func Test_TaskOption_LockHeartbeat(t *testing.T) {
 	// given
-	option := LockHeartbeat(time.Second)
-	options := &TaskOptions{LockHeartbeat: time.Hour}
+	option := crontask.LockHeartbeat(time.Second)
+	options := &crontask.TaskOptions{LockHeartbeat: time.Hour}
 
 	// when
 	option(options)
