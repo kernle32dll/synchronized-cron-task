@@ -256,11 +256,10 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 	logger.Tracef("Trying to temporarily gain leadership for synchronized task %q", synchronizedCronTask.name)
 
 	lock, err := synchronizedCronTask.locker.Obtain(
+		ctx,
 		fmt.Sprintf("%s.lock", synchronizedCronTask.name),
 		lockTimeout,
-		&redislock.Options{
-			Context: ctx,
-		},
+		nil,
 	)
 	if err != nil {
 		return err
@@ -268,7 +267,7 @@ func (synchronizedCronTask *SynchronizedCronTask) handleElectionAttempt(
 
 	defer func() {
 		logger.Tracef("Resigning temporary leadership for synchronized task %q", synchronizedCronTask.name)
-		if err := lock.Release(); err != nil {
+		if err := lock.Release(ctx); err != nil {
 			logger.Warnf("Failed to resign leadership for synchronized task %q: %s - the service should be able to recover from this", synchronizedCronTask.name, err)
 		}
 	}()
@@ -307,9 +306,7 @@ func (synchronizedCronTask *SynchronizedCronTask) blockForFinish(ctx context.Con
 			return nil
 		case <-ticker.C:
 			// Renew the lock
-			if err := lock.Refresh(lockTimeout, &redislock.Options{
-				Context: ctx,
-			}); err != nil {
+			if err := lock.Refresh(ctx, lockTimeout, nil); err != nil {
 				return fmt.Errorf(
 					"failed to renew leadership for synchronized task %q lock while executing: %w - crudely canceling",
 					synchronizedCronTask.name, err,
