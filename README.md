@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/kernle32dll/synchronized-cron-task.svg?branch=master)](https://travis-ci.com/kernle32dll/synchronized-cron-task)
+![test](https://github.com/kernle32dll/synchronized-cron-task/workflows/test/badge.svg)
 [![GoDoc](https://godoc.org/github.com/kernle32dll/synchronized-cron-task?status.svg)](http://godoc.org/github.com/kernle32dll/synchronized-cron-task)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kernle32dll/synchronized-cron-task)](https://goreportcard.com/report/github.com/kernle32dll/synchronized-cron-task)
 [![codecov](https://codecov.io/gh/kernle32dll/synchronized-cron-task/branch/master/graph/badge.svg)](https://codecov.io/gh/kernle32dll/synchronized-cron-task)
