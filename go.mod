@@ -1,6 +1,6 @@
 module github.com/kernle32dll/synchronized-cron-task
 
-go 1.13
+go 1.14
 
 require (
 	github.com/bsm/redislock v0.7.0
