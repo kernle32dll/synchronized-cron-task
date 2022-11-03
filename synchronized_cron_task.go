@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sync/atomic"
 	"time"
 )
@@ -57,7 +57,7 @@ type SynchronizedCronTask struct {
 	shutdownFunc       func()
 }
 
-func (synchronizedCronTask SynchronizedCronTask) MarshalJSON() ([]byte, error) {
+func (synchronizedCronTask *SynchronizedCronTask) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Name     string    `json:"name"`
 		NextTime time.Time `json:"nextTime"`
@@ -130,7 +130,7 @@ func NewSynchronizedCronTaskWithOptions(client redislock.RedisClient, taskFunc T
 		// Create a "noop" logger, so we don't have to check for
 		// the logger being nil
 		logger := logrus.New()
-		logger.Out = ioutil.Discard
+		logger.Out = io.Discard
 
 		options.Logger = logger
 	}
