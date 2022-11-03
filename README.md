@@ -24,8 +24,8 @@ Detailed documentation can be found on [GoDoc](https://godoc.org/github.com/kern
 
 synchronized-cron-task is automatically tested against the following:
  
-- Go 1.14.X, 1.15.X and 1.16.X
-- Redis 4.X, 5.X and 6.X.
+- Go 1.17.X, 1.18.X and 1.19.X
+- Redis 5.X, 6.X and 7.X.
 
 ## Getting started
 

@@ -36,9 +36,9 @@ func Test_SynchronizedCronTask(t *testing.T) {
 	t.Run("secondless-cron-expression", secondlessCronExpression)
 
 	redisVersions := []string{
-		"4-alpine",
 		"5-alpine",
 		"6-alpine",
+		"7-alpine",
 	}
 	for i := range redisVersions {
 		version := redisVersions[i]
